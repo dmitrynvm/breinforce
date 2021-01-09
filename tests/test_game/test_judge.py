@@ -1,6 +1,6 @@
 import pytest
 from breinforce import errors
-from breinforce.games.bropoker import Card, Deck, Dealer, HashMap, Judge
+from breinforce.games.bropoker import Card, Deck, HashMap, Judge
 
 
 def test_init():

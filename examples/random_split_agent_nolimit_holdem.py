@@ -34,7 +34,7 @@ probs = [
 agents = [agents.RandomSplitAgent(actions, splits, probs)] * 6
 env.register_agents(agents)
 obs = env.reset()
-view = views.HandsView(env.dealer.config)
+view = views.HandsView(env.config)
 
 # view = views.AsciiView()
 # player = self.player
@@ -72,7 +72,7 @@ view = views.HandsView(env.dealer.config)
 history = []
 while True:
     bet = env.act(obs)
-    print(env.dealer.render())
+    print(env.render())
     hand = env.step(bet)
     obs, rewards, done, info = hand
     history.append(hand)

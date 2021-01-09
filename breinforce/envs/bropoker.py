@@ -1,56 +1,3 @@
-
-
-# class Bropoker(gym.Env):
-#     def __init__(
-#         self,
-#         num_players: int,
-#         num_streets: int,
-#         blinds: Union[int, List[int]],
-#         antes: Union[int, List[int]],
-#         raise_sizes: Union[float, str, List[Union[float, str]]],
-#         num_raises: Union[float, List[float]],
-#         num_suits: int,
-#         num_ranks: int,
-#         num_hole_cards: int,
-#         num_community_cards: Union[int, List[int]],
-#         num_cards_for_hand: int,
-#         start_stack: int,
-#         low_end_straight: bool = True,
-#         rake: float = 0.0,
-#         order: Optional[List[str]] = None,
-#     ) -> None:
-
-#         self.dealer = Dealer(
-#             num_players,
-#             num_streets,
-#             blinds,
-#             antes,
-#             raise_sizes,
-#             num_raises,
-#             num_suits,
-#             num_ranks,
-#             num_hole_cards,
-#             num_community_cards,
-#             num_cards_for_hand,
-#             start_stack,
-#             low_end_straight,
-#             rake,
-#             order
-#         )
-
-#     def act(self, obs: dict) -> int:
-#         return self.dealer.act(obs)
-
-#     def step(self, bet: int) -> Tuple[Dict, np.ndarray, np.ndarray, None]:
-#         return self.dealer.step(bet)
-
-#     def reset(self) -> Dict:
-#         return self.dealer.reset()
-
-#     def register_agents(self, agents: Union[List, Dict]) -> None:
-#         self.dealer.register_agents(agents)
-
-
 '''Classes and functions for running poker games'''
 import gym
 from typing import Dict, List, Optional, Tuple, Union
@@ -120,28 +67,6 @@ class Bropoker(gym.Env):
         optional custom order of hand ranks, must be permutation of
         ['sf', 'fk', 'fh', 'fl', 'st', 'tk', 'tp', 'pa', 'hc']. if
         order=None, hands are ranked by rarity. by default None
-
-    Examples
-    ----------
-    1-2 Heads Up No Limit Texas Hold'em:
-
-        Dealer(num_players=2, num_streets=4, blinds=[1, 2], antes=0,
-               raise_sizes=float('inf'), num_raises=float('inf'),
-               num_suits=4, num_ranks=13, num_hole_cards=2, start_stack=200)
-
-    1-2 6 Player PLO
-
-        Dealer(num_players=6, num_streets=4, blinds=[0, 1, 2, 0, 0, 0],
-               antes=0, raise_sizes='pot', num_raises=float('inf'),
-               num_suits=4, num_ranks=13, num_hole_cards=4, start_stack=200)
-
-    1-2 Heads Up No Limit Short Deck
-
-        Dealer(num_players=2, num_streets=4, blinds=[1, 2], antes=0,
-               raise_sizes=float('inf'), num_raises=float('inf'),
-               num_suits=4, num_ranks=9, num_hole_cards=2, start_stack=200,
-               order=['sf', 'fk', 'fl', 'fh', 'st',
-                      'tk', 'tp', 'pa', 'hc'])
     '''
 
     def __init__(
@@ -162,7 +87,7 @@ class Bropoker(gym.Env):
         rake: float = 0.0,
         order: Optional[List[str]] = None,
     ) -> None:
-        self.dealer = self
+
         def clean_rs(raise_size):
             if isinstance(raise_size, (int, float)):
                 return raise_size
@@ -309,9 +234,6 @@ class Bropoker(gym.Env):
         self.__collect_multiple_bets(bets=self.blinds, street_commits=True)
         self.__move_action()
         self.__move_action()
-
-
-
         return self.__observation()
 
     def step(self, bet: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
@@ -404,7 +326,7 @@ class Bropoker(gym.Env):
             self.street_option = np.logical_not(self.active).astype(np.uint8)
             self.street_raises = 0
 
-        obs, payouts, done = self.__output()
+        obs, payouts, done, info = self.__output()
         if all(done):
             self.player = -1
             obs['player'] = -1
@@ -548,7 +470,7 @@ class Bropoker(gym.Env):
         observation = self.__observation()
         payouts = self.__payouts()
         done = self.__done()
-        return observation, payouts, done
+        return observation, payouts, done, None
 
     def __eval_round(self) -> np.ndarray:
         # grab array of hand strength and pot commits
