@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Tuple, Union
 import gym
 import numpy as np
 from breinforce import errors
-from breinforce.agents import BaseAgent
 from breinforce.games.bropoker import Dealer
 
 
@@ -127,120 +126,14 @@ class Bropoker(gym.Env):
             order
         )
 
-        max_bet = start_stack * num_players
-        num_comm_cards = sum(num_community_cards)
-
-        self.action_space = gym.spaces.Discrete(max_bet)
-        self.observation_space = gym.spaces.Dict(
-            {
-                'player': gym.spaces.Discrete(num_players),
-                'active': gym.spaces.MultiBinary(num_players),
-                'button': gym.spaces.Discrete(num_players),
-                'call': gym.spaces.Discrete(max_bet),
-                'community_cards': gym.spaces.Tuple(
-                    (
-                        gym.spaces.Tuple(
-                            (
-                                gym.spaces.Discrete(num_ranks),
-                                gym.spaces.Discrete(num_suits)
-                            )
-                        ),
-                    ) * num_comm_cards
-                ),
-                'hole_cards': gym.spaces.Tuple(
-                    (
-                        gym.spaces.Tuple(
-                            (
-                                gym.spaces.Tuple(
-                                    (
-                                        gym.spaces.Discrete(num_ranks),
-                                        gym.spaces.Discrete(num_suits)
-                                    )
-                                ),
-                            ) * num_hole_cards
-                        ),
-                    ) * num_players
-                ),
-                'min_raise': gym.spaces.Discrete(max_bet),
-                'max_raise': gym.spaces.Discrete(max_bet),
-                'pot': gym.spaces.Discrete(max_bet),
-                'stacks': gym.spaces.Tuple(
-                    (
-                        gym.spaces.Discrete(max_bet),
-                    ) * num_players
-                ),
-                'street_commits': gym.spaces.Tuple(
-                    (
-                        gym.spaces.Discrete(max_bet),
-                    ) * num_players
-                )
-            }
-        )
-
-        self.agents: Optional[Dict[int, BaseAgent]] = None
-        self.prev_obs: Optional[Dict] = None
-
     def act(self, obs: dict) -> int:
-        if self.agents is None:
-            raise errors.NoRegisteredAgentsError(
-                'register agents using env.register_agents(...) before'
-                'calling act(obs)'
-            )
-        if self.prev_obs is None:
-            raise errors.EnvironmentResetError(
-                'call reset() before calling first step()'
-            )
-        player = self.prev_obs['player']
-        bet = self.agents[player].act(obs)
-        return bet
+        return self.dealer.act(obs)
 
     def step(self, bet: int) -> Tuple[Dict, np.ndarray, np.ndarray, None]:
-        obs, rewards, done = self.dealer.step(bet)
-        obs['hole_cards'] = obs['hole_cards'][obs['player']]
-        if self.agents is not None:
-            self.prev_obs = obs
-        return obs, rewards, done, None
+        return self.dealer.step(bet)
 
-    def reset(
-        self,
-        reset_button: bool = False,
-        reset_stacks: bool = False
-    ) -> Dict:
-        obs = self.dealer.reset(reset_button, reset_stacks)
-        obs['hole_cards'] = obs['hole_cards'][obs['player']]
-        if self.agents is not None:
-            self.prev_obs = obs
-        return obs
+    def reset(self) -> Dict:
+        return self.dealer.reset()
 
     def register_agents(self, agents: Union[List, Dict]) -> None:
-        error_msg = 'invalid agent configuration, got {}, expected {}'
-        if not isinstance(agents, (dict, list)):
-            raise errors.InvalidAgentConfigurationError(
-                error_msg.format(type(agents), 'list or dictionary of agents')
-            )
-        if len(agents) != self.dealer.num_players:
-            raise errors.InvalidAgentConfigurationError(
-                error_msg.format(
-                    f'{len(agents)} number of agents',
-                    f'{self.dealer.num_players} number of agents',
-                )
-            )
-        if isinstance(agents, list):
-            agent_keys = list(range(len(agents)))
-        else:
-            agent_keys = list(agents.keys())
-            if set(agent_keys) != set(range(len(agents))):
-                raise errors.InvalidAgentConfigurationError(
-                    f'invalid agent configuration, got {agent_keys}, '
-                    f'expected permutation of {list(range(len(agents)))}'
-                )
-            agents = list(agents.values())
-        all_base_agents = all(isinstance(a, BaseAgent) for a in agents)
-        if not all_base_agents:
-            raise errors.InvalidAgentConfigurationError(
-                error_msg.format(
-                    f'agent types {[type(_agent) for _agent in agents]}',
-                    'only subtypes of breinforce.agents.BaseAgent',
-                )
-            )
-        self.agents = dict(zip(agent_keys, agents))
+        self.dealer.register_agents(agents)

@@ -1,6 +1,7 @@
 '''Classes and functions for running poker games'''
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 import numpy as np
+from breinforce.agents import BaseAgent
 from breinforce import errors, views
 from .card import Card
 from .deck import Deck
@@ -182,6 +183,9 @@ class Dealer:
             'stacks': self.stacks
         }
 
+        self.agents: Optional[Dict[int, BaseAgent]] = None
+        self.prev_obs: Optional[Dict] = None
+
     def reset(
         self,
         reset_button: bool = False,
@@ -253,6 +257,8 @@ class Dealer:
         self.__collect_multiple_bets(bets=self.blinds, street_commits=True)
         self.__move_action()
         self.__move_action()
+
+
 
         return self.__observation()
 
@@ -346,15 +352,16 @@ class Dealer:
             self.street_option = np.logical_not(self.active).astype(np.uint8)
             self.street_raises = 0
 
-        observation, payouts, done = self.__output()
+        obs, payouts, done = self.__output()
         if all(done):
             self.player = -1
-            observation['player'] = -1
+            obs['player'] = -1
             if self.rake != 0.0:
                 payouts = [
                     int(p * (1 - self.rake)) if p > 0 else p for p in payouts
                 ]
-        return observation, payouts, done
+        obs['hole_cards'] = obs['hole_cards'][obs['player']]
+        return obs, payouts, done, None
 
     def __all_agreed(self) -> bool:
         # not all agreed if not all players had chance to act
@@ -455,7 +462,7 @@ class Dealer:
         hole_cards = [
             [str(card) for card in cards] for cards in self.hole_cards
         ]
-        observation: dict = {
+        obs: dict = {
             'player': self.player,
             'active': self.active,
             'button': self.button,
@@ -468,7 +475,9 @@ class Dealer:
             'stacks': self.stacks,
             'street_commits': self.street_commits,
         }
-        return observation
+        if self.agents is not None:
+            self.prev_obs = obs
+        return obs
 
     def __payouts(self) -> np.ndarray:
         # players that have folded lose their bets
@@ -578,3 +587,50 @@ class Dealer:
             'num_community_cards': sum(self.num_community_cards)
         }
         return view.render(screen)
+
+    def act(self, obs: dict) -> int:
+        if self.agents is None:
+            raise errors.NoRegisteredAgentsError(
+                'register agents using env.register_agents(...) before'
+                'calling act(obs)'
+            )
+        if self.prev_obs is None:
+            raise errors.EnvironmentResetError(
+                'call reset() before calling first step()'
+            )
+        player = self.prev_obs['player']
+        bet = self.agents[player].act(obs)
+        return bet
+
+    def register_agents(self, agents: Union[List, Dict]) -> None:
+        error_msg = 'invalid agent configuration, got {}, expected {}'
+        if not isinstance(agents, (dict, list)):
+            raise errors.InvalidAgentConfigurationError(
+                error_msg.format(type(agents), 'list or dictionary of agents')
+            )
+        if len(agents) != self.num_players:
+            raise errors.InvalidAgentConfigurationError(
+                error_msg.format(
+                    f'{len(agents)} number of agents',
+                    f'{self.num_players} number of agents',
+                )
+            )
+        if isinstance(agents, list):
+            agent_keys = list(range(len(agents)))
+        else:
+            agent_keys = list(agents.keys())
+            if set(agent_keys) != set(range(len(agents))):
+                raise errors.InvalidAgentConfigurationError(
+                    f'invalid agent configuration, got {agent_keys}, '
+                    f'expected permutation of {list(range(len(agents)))}'
+                )
+            agents = list(agents.values())
+        all_base_agents = all(isinstance(a, BaseAgent) for a in agents)
+        if not all_base_agents:
+            raise errors.InvalidAgentConfigurationError(
+                error_msg.format(
+                    f'agent types {[type(_agent) for _agent in agents]}',
+                    'only subtypes of bropoker.agent.BaseAgent',
+                )
+            )
+        self.agents = dict(zip(agent_keys, agents))
