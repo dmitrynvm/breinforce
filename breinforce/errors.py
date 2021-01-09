@@ -1,0 +1,50 @@
+class InvalidConfigError(Exception):
+    pass
+
+
+class InvalidRaiseSizeError(Exception):
+    pass
+
+
+class InvalidRankError(Exception):
+    pass
+
+
+class InvalidSuitError(Exception):
+    pass
+
+
+class InvalidOrderError(Exception):
+    pass
+
+
+class InvalidHandSizeError(Exception):
+    pass
+
+
+class InvalidHandRankError(Exception):
+    pass
+
+
+class TooFewActivePlayersError(Exception):
+    pass
+
+
+class HashMapResetError(Exception):
+    pass
+
+
+class InvalidRenderModeError(Exception):
+    pass
+
+
+class InvalidAgentConfigurationError(Exception):
+    pass
+
+
+class EnvironmentResetError(Exception):
+    pass
+
+
+class NoRegisteredAgentsError(Exception):
+    pass
