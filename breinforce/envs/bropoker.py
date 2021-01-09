@@ -3,7 +3,7 @@ import gym
 import numpy as np
 from breinforce import errors
 from breinforce.agents import BaseAgent
-from breinforce.games.breinforce import Dealer
+from breinforce.games.bropoker import Dealer
 
 
 class Bropoker(gym.Env):

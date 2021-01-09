@@ -1,7 +1,7 @@
 from . import configs
 from .configure import configure
 from .register import register
-from .breinforce import breinforce
+from .bropoker import Bropoker
 from .recorder import Recorder
 
 __all__ = [

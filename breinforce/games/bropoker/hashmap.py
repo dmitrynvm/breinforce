@@ -4,7 +4,7 @@ import functools
 import itertools
 import operator
 from typing import Dict, List
-from bropoker import errors
+from breinforce import errors
 from . import utils
 from .card import Card
 
