@@ -6,7 +6,7 @@ import os
 from typing import Dict, List, Optional, Tuple, Union
 from breinforce import errors, views
 from breinforce.agents import BaseAgent
-from breinforce.constants import BASEDIR
+from breinforce.config.application import CONFIG_DIR
 from breinforce.games.bropoker import Card, Deck, Judge
 from . import utils
 
@@ -163,7 +163,7 @@ class Bropoker(gym.Env):
         Merges the local configured envs to the global OpenAI Gym list.
         """
         try:
-            config_path = os.path.join(BASEDIR, 'configs', 'bropoker.json')
+            config_path = os.path.join(CONFIG_DIR, 'bropoker.json')
             with open(config_path, 'r') as f:
                 configs = json.loads(f.read())
                 for name, config in configs.items():

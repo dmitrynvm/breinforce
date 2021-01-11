@@ -1,5 +1,5 @@
-from breinforce import agents, constants, envs, views
+from breinforce import agents, config, envs, views
 
-__all__ = ['agents', 'envs', 'views']
+__all__ = ['agents', 'config', 'envs', 'views']
 
 envs.Bropoker.configure()
