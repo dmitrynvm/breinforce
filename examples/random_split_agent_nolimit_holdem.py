@@ -6,7 +6,7 @@ recorder = envs.Recorder()
 env = gym.make('CustomSixPlayer-v0')
 
 
-actions = [
+actns = [
     'fold',
     'call',
     'raise_half_pot',
@@ -14,7 +14,7 @@ actions = [
     'raise_two_pot',
     'allin'
 ]
-splits = [
+fracs = [
     0,
     None,
     0.5,
@@ -31,7 +31,7 @@ probs = [
     0.2
 ]
 
-agents = [agents.RandomSplitAgent(actions, splits, probs)] * 6
+agents = [agents.RandomSplitAgent(actns, fracs, probs)] * 6
 env.register_agents(agents)
 obs = env.reset()
 view = views.HandsView(env.config)
@@ -62,22 +62,20 @@ view = views.HandsView(env.config)
 #     'prev_action': None if not self.history else self.history[-1],
 #     'street_commits': street_commits,
 #     'stacks': stacks,
-#     'num_players': self.num_players,
-#     'num_hole_cards': self.num_hole_cards,
-#     'num_community_cards': sum(self.num_community_cards)
+#     'n_players': self.n_players,
+#     'n_hole_cards': self.n_hole_cards,
+#     'n_community_cards': sum(self.n_community_cards)
 # }
 # return view.render(screen)
 
 
-history = []
 while True:
-    bet = env.act(obs)
-    print(env.render())
-    hand = env.step(bet)
+    action = env.act(obs)
+    # print(env.render())
+    hand = env.step(action)
     obs, rewards, done, info = hand
-    history.append(hand)
     if all(done):
         break
+print(env.history)
 
-
-print(view.render(history))
+# print(view.render(history))

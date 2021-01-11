@@ -46,7 +46,7 @@ class AsciiView(BaseView):
             if not active:
                 players.append(
                     '{:2}. '.format(idx + 1)
-                    + ','.join(['--'] * self.num_hole_cards)
+                    + ','.join(['--'] * self.n_hole_cards)
                     + ' {:,}'.format(stack)
                 )
                 continue
@@ -59,7 +59,7 @@ class AsciiView(BaseView):
                 continue
             players.append(
                 '{:2}. '.format(idx + 1)
-                + ','.join(['??'] * self.num_hole_cards)
+                + ','.join(['??'] * self.n_hole_cards)
                 + ' {:,}'.format(stack)
             )
         return players
@@ -71,12 +71,12 @@ class AsciiView(BaseView):
         prev_action = config['prev_action']
         if prev_action is not None:
             action_string = 'Player {} {}'
-            player, bet, fold = prev_action
+            player, action, fold = prev_action
             if fold:
                 action = 'folded '
             else:
-                if bet:
-                    action = 'bet {} '.format(bet)
+                if action:
+                    action = 'action {} '.format(action)
                 else:
                     action = 'checked '
             action_string = action_string.format(player + 1, action)
@@ -123,7 +123,7 @@ class AsciiView(BaseView):
                     'payouts': List[int] - list of chips won for each
                                player,
                     'prev_action': Tuple[int, int, int] - last
-                                   position bet and fold,
+                                   position action and fold,
                     'street_commits': List[int] - list of number of
                                       chips added to pot from each
                                       player on current street,
@@ -131,10 +131,10 @@ class AsciiView(BaseView):
                 }
         '''
 
-        self.num_players = config['num_players']
-        self.num_hole_cards = config['num_hole_cards']
-        self.num_community_cards = config['num_community_cards']
-        self.player_pos = self.POS_DICT[self.num_players]
+        self.n_players = config['n_players']
+        self.n_hole_cards = config['n_hole_cards']
+        self.n_community_cards = config['n_community_cards']
+        self.player_pos = self.POS_DICT[self.n_players]
         player = config['player']
         dealer = config['dealer']
         done = config['done']
@@ -147,7 +147,7 @@ class AsciiView(BaseView):
 
         # community cards
         ccs = [str(card) for card in config['community_cards']]
-        ccs += ['--'] * (self.num_community_cards - len(ccs))
+        ccs += ['--'] * (self.n_community_cards - len(ccs))
         ccs_string = '[' + ','.join(ccs) + ']'
         str_config['ccs'] = ccs_string
 

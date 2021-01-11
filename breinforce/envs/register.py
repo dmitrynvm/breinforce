@@ -12,17 +12,17 @@ def register(configs: Dict) -> None:
         values valid breinforce configs, example:
             configs = {
                 'NolimitHoldemTwoPlayer-v0': {
-                    'num_players': 2,
-                    'num_streets': 4,
+                    'n_players': 2,
+                    'n_streets': 4,
                     'blinds': [1, 2],
                     'antes': 0,
                     'raise_sizes': float('inf'),
-                    'num_raises': float('inf'),
-                    'num_suits': 4,
-                    'num_ranks': 13,
-                    'num_hole_cards': 2,
-                    'num_community_cards': [0, 3, 1, 1],
-                    'num_cards_for_hand': 5,
+                    'n_raises': float('inf'),
+                    'n_suits': 4,
+                    'n_ranks': 13,
+                    'n_hole_cards': 2,
+                    'n_community_cards': [0, 3, 1, 1],
+                    'n_cards_for_hand': 5,
                     'start_stack': 200
                 }
             }

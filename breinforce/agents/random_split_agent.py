@@ -18,7 +18,7 @@ class RandomSplitAgent(SplitAgent):
         ids = list(range(len(self.legal_actions)))
         i = random.choices(ids, self.probs)[0]
         action = self.legal_actions[i]
-        split = self.splits[i]
+        split = self.fractions[i]
         pot = obs['pot']
         call = obs['call']
         min_raise = obs['min_raise']

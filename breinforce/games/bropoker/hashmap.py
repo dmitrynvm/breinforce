@@ -306,20 +306,20 @@ class HashMap:
 
         # start with best straight (flush)
         # for 5 card hand with 13 ranks: 0b1111100000000
-        bin_num_str = '0b' + '1' * cards_for_hand + '0' * (13 - cards_for_hand)
+        bin_n_str = '0b' + '1' * cards_for_hand + '0' * (13 - cards_for_hand)
         # remove one 0 for every straight (flush)
         for _ in range(ranks - (cards_for_hand - 1)):
-            straight_flushes.append(int(bin_num_str, 2))
-            bin_num_str = bin_num_str[:-1]
+            straight_flushes.append(int(bin_n_str, 2))
+            bin_n_str = bin_n_str[:-1]
         if low_end_straight:
             # add low end straight
-            bin_num_str = (
+            bin_n_str = (
                 '0b1'
                 + '0' * (ranks - cards_for_hand)
                 + '1' * (cards_for_hand - 1)
                 + '0' * (13 - ranks)
             )
-            straight_flushes.append(int(bin_num_str, 2))
+            straight_flushes.append(int(bin_n_str, 2))
 
         return straight_flushes
 
@@ -328,8 +328,8 @@ class HashMap:
         flushes = []
         # start with lowest non pair hand
         # for 5 card hand with 13 ranks: 0b11111
-        bin_num_str = '0b' + ('1' * cards_for_hand)
-        gen = utils.lexographic_next_bit(int(bin_num_str, 2))
+        bin_n_str = '0b' + ('1' * cards_for_hand)
+        gen = utils.lexographic_next_bit(int(bin_n_str, 2))
         # iterate over all possibilities of unique hands
         for _ in range(int(utils.ncr(ranks, cards_for_hand))):
             # pull the next flush pattern from generator
@@ -363,8 +363,8 @@ class HashMap:
         def add_to_map(rank_string, rank_bits, suited):
             if not self.hand_dict[rank_string]['cumulative unsuited']:
                 return
-            num_ranks = len(rank_bits)
-            assert num_ranks == self.hand_dict[rank_string]['unsuited']
+            n_ranks = len(rank_bits)
+            assert n_ranks == self.hand_dict[rank_string]['unsuited']
             hand_rank = self.__get_rank(rank_string)
             for rank_bit in rank_bits:
                 prime_product = utils.prime_product_from_rankbits(rank_bit)
@@ -405,14 +405,14 @@ class HashMap:
                 # card rank
                 for card_rank, multiple in zip(card_ranks, multiples):
                     base_product *= Card.PRIMES[card_rank] ** multiple
-                num_kickers = cards_for_hand - sum(multiples)
+                n_kickers = cards_for_hand - sum(multiples)
                 # record product in lookup table
-                if num_kickers:
+                if n_kickers:
                     kickers = backwards_ranks[:]
                     for card_rank in card_ranks:
                         kickers.remove(card_rank)
                     kicker_combinations = list(
-                        itertools.combinations(kickers, num_kickers)
+                        itertools.combinations(kickers, n_kickers)
                     )
                     for kickers in kicker_combinations:
                         product = base_product
@@ -424,8 +424,8 @@ class HashMap:
                     self.unsuited_lookup[base_product] = hand_rank
                     hand_rank += 1
             # check hand rank is equal to number of iterated ranks
-            num_ranks = hand_rank - self.__get_rank(rank_string)
-            assert num_ranks == self.hand_dict[rank_string]['unsuited']
+            n_ranks = hand_rank - self.__get_rank(rank_string)
+            assert n_ranks == self.hand_dict[rank_string]['unsuited']
 
         add_to_map('four of a kind', [4])
         add_to_map('full house', [3, 2])

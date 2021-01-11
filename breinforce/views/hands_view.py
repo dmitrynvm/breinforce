@@ -20,13 +20,13 @@ class HandsView(BaseView):
         date1 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
         date2 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
         table_id = 't' + self._uuid(4, 'hex')
-        num_players = self.config['num_players']
+        n_players = self.config['n_players']
         button = self.config['button']
-        user_ids = ['p' + self._uuid(4, 'hex') for _ in range(num_players)]
+        user_ids = ['p' + self._uuid(4, 'hex') for _ in range(n_players)]
         stacks = self.config['stacks']
         header = f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
             f'($sb/$bb EUR) - {date1} MSK [{date2} ET]\n'
-        preflop = f'Table \'{table_id}\' {num_players}-max' \
+        preflop = f'Table \'{table_id}\' {n_players}-max' \
             f'Seat #{button} is the button\n'
         for i, stack in enumerate(stacks):
             user_id = user_ids[i]

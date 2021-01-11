@@ -6,9 +6,9 @@ class SplitAgent(BaseAgent):
     Agent who can do limited amount of fractual bets.
     """
 
-    def __init__(self, legal_actions, splits):
+    def __init__(self, legal_actions, fractions):
         super().__init__(legal_actions)
-        self.splits = splits
+        self.fractions = fractions
 
     def act(self, action, split, pot, call, min_raise, max_raise):
         bet = None

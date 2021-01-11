@@ -12,8 +12,8 @@ env.register_agents([KuhnAgent(0.3)] * 2)
 obs = env.reset()
 
 while True:
-    bet = env.act(obs)
-    obs, rewards, done, info = env.step(bet)
+    action = env.act(obs)
+    obs, rewards, done, info = env.step(action)
 
     if all(done):
         break

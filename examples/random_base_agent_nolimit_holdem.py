@@ -9,8 +9,8 @@ obs = env.reset()
 
 i = 0
 while True:
-    bet = env.act(obs)
-    obs, rewards, done, info = env.step(bet)
+    action = env.act(obs)
+    obs, rewards, done, info = env.step(action)
     print(obs['active'])
     i += 1
     if all(done):

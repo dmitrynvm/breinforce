@@ -12,28 +12,28 @@ class Deck:
 
     Parameters
     ----------
-    num_suits : int
+    n_suits : int
         number of suits to use in deck
-    num_ranks : int
+    n_ranks : int
         number of ranks to use in deck
     '''
 
-    def __init__(self, num_suits: int, num_ranks: int) -> None:
-        if num_ranks < 1 or num_ranks > 13:
+    def __init__(self, n_suits: int, n_ranks: int) -> None:
+        if n_ranks < 1 or n_ranks > 13:
             raise errors.InvalidRankError(
                 f'Invalid number of suits, expected number of suits '
-                f'between 1 and 13, got {num_ranks}'
+                f'between 1 and 13, got {n_ranks}'
             )
-        if num_suits < 1 or num_suits > 4:
+        if n_suits < 1 or n_suits > 4:
             raise errors.InvalidSuitError(
                 f'Invalid number of suits, expected number of suits '
-                f'between 1 and 4, got {num_suits}'
+                f'between 1 and 4, got {n_suits}'
             )
-        self.num_ranks = num_ranks
-        self.num_suits = num_suits
+        self.n_ranks = n_ranks
+        self.n_suits = n_suits
         self.full_deck: List[Card] = []
-        ranks = Card.STR_RANKS[-num_ranks:]
-        suits = list(Card.SUITS_TO_INTS.keys())[:num_suits]
+        ranks = Card.STR_RANKS[-n_ranks:]
+        suits = list(Card.SUITS_TO_INTS.keys())[:n_suits]
         for rank in ranks:
             for suit in suits:
                 self.full_deck.append(Card(rank + suit))
@@ -127,7 +127,7 @@ class Deck:
                 for top_card in top_cards
             ]
             self._top_idcs = [self.full_deck.index(c) for c in cards]
-            all_idcs = set(range(self.num_ranks * self.num_suits))
+            all_idcs = set(range(self.n_ranks * self.n_suits))
             self._bottom_idcs = list(all_idcs.difference(set(self._top_idcs)))
         self._tricked = True
         return self.shuffle()

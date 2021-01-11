@@ -23,7 +23,7 @@ class KuhnAgent(BaseAgent):
                 return 1
             return 0
 
-    def player_1_bet(self, obs):
+    def player_1_action(self, obs):
         if obs['hole_cards'][0][0] == 'Q':
             return 0
         if obs['hole_cards'][0][0] == 'K':
@@ -36,7 +36,7 @@ class KuhnAgent(BaseAgent):
     def _player_1(self, obs):
         if obs['pot'] == 2:
             return self.player_1_check(obs)
-        return self.player_1_bet(obs)
+        return self.player_1_action(obs)
 
     def _player_2_check(self, obs):
         if obs['hole_cards'][0][0] == 'Q':
@@ -48,7 +48,7 @@ class KuhnAgent(BaseAgent):
         if obs['hole_cards'][0][0] == 'A':
             return 1
 
-    def _player_2_bet(self, obs):
+    def _player_2_action(self, obs):
         if obs['hole_cards'][0][0] == 'Q':
             return 0
         if obs['hole_cards'][0][0] == 'K':
@@ -61,7 +61,7 @@ class KuhnAgent(BaseAgent):
     def _player_2(self, obs):
         if obs['pot'] == 2:
             return self._player_2_check(obs)
-        return self._player_2_bet(obs)
+        return self._player_2_action(obs)
 
     def act(self, obs):
         if obs['player'] == 0:

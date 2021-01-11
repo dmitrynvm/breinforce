@@ -15,11 +15,11 @@ class Bropoker(gym.Env):
 
     Parameters
     ----------
-    num_players : int
+    n_players : int
         maximum number of players
-    num_streets : int
+    n_streets : int
         number of streets including preflop, e.g. for texas hold'em
-        num_streets=4
+        n_streets=4
     blinds : Union[int, List[int]]
         blind distribution as a list of ints, one for each player
         starting from the button e.g. [0, 1, 2] for a three player game
@@ -39,25 +39,25 @@ class Bropoker(gym.Env):
         string is passed the value is expanded to a list the length
         of number of streets, e.g. for a standard no limit game pass
         raise_sizes=float('inf')
-    num_raises : Union[float, List[float]]
+    n_raises : Union[float, List[float]]
         max number of bets for each street including preflop, valid
         raise numbers are ints and floats. if only a single int or float
         is passed the value is expanded to a list the length of number
-        of streets, e.g. for a standard limit game pass num_raises=4
-    num_suits : int
+        of streets, e.g. for a standard limit game pass n_raises=4
+    n_suits : int
         number of suits to use in deck, must be between 1 and 4
-    num_ranks : int
+    n_ranks : int
         number of ranks to use in deck, must be between 1 and 13
-    num_hole_cards : int
+    n_hole_cards : int
         number of hole cards per player, must be greater than 0
-    num_community_cards : Union[int, List[int]]
+    n_community_cards : Union[int, List[int]]
         number of community cards per street including preflop, e.g.
-        for texas hold'em pass num_community_cards=[0, 3, 1, 1]. if only
+        for texas hold'em pass n_community_cards=[0, 3, 1, 1]. if only
         a single int is passed, it is expanded to a list the length of
         number of streets
-    num_cards_for_hand : int
+    n_cards_for_hand : int
         number of cards for a valid poker hand, e.g. for texas hold'em
-        num_cards_for_hand=5
+        n_cards_for_hand=5
     start_stack : int
         number of chips each player starts with
     low_end_straight : bool, optional
@@ -71,17 +71,17 @@ class Bropoker(gym.Env):
 
     def __init__(
         self,
-        num_players: int,
-        num_streets: int,
+        n_players: int,
+        n_streets: int,
         blinds: Union[int, List[int]],
         antes: Union[int, List[int]],
         raise_sizes: Union[float, str, List[Union[float, str]]],
-        num_raises: Union[float, List[float]],
-        num_suits: int,
-        num_ranks: int,
-        num_hole_cards: int,
-        num_community_cards: Union[int, List[int]],
-        num_cards_for_hand: int,
+        n_raises: Union[float, List[float]],
+        n_suits: int,
+        n_ranks: int,
+        n_hole_cards: int,
+        n_community_cards: Union[int, List[int]],
+        n_cards_for_hand: int,
         start_stack: int,
         low_end_straight: bool = True,
         rake: float = 0.0,
@@ -99,31 +99,31 @@ class Bropoker(gym.Env):
             )
 
         # config
-        self.num_players = num_players
-        self.num_streets = num_streets
+        self.n_players = n_players
+        self.n_streets = n_streets
         self.blinds = np.array(blinds)
         self.antes = np.array(antes)
         self.big_blind = blinds[1]
         self.raise_sizes = [clean_rs(raise_size) for raise_size in raise_sizes]
-        self.num_raises = [float(raise_num) for raise_num in num_raises]
-        self.num_suits = num_suits
-        self.num_ranks = num_ranks
-        self.num_hole_cards = num_hole_cards
-        self.num_community_cards = num_community_cards
-        self.num_cards_for_hand = num_cards_for_hand
+        self.n_raises = [float(raise_num) for raise_num in n_raises]
+        self.n_suits = n_suits
+        self.n_ranks = n_ranks
+        self.n_hole_cards = n_hole_cards
+        self.n_community_cards = n_community_cards
+        self.n_cards_for_hand = n_cards_for_hand
         self.start_stack = start_stack
 
         # dealer
         self.player = -1
-        self.active = np.zeros(self.num_players, dtype=np.uint8)
+        self.active = np.zeros(self.n_players, dtype=np.uint8)
         self.button = 0
         self.community_cards: List[Card] = []
-        self.deck = Deck(self.num_suits, self.num_ranks)
+        self.deck = Deck(self.n_suits, self.n_ranks)
         self.rake = rake
         self.judge = Judge(
-            self.num_suits,
-            self.num_ranks,
-            self.num_cards_for_hand,
+            self.n_suits,
+            self.n_ranks,
+            self.n_cards_for_hand,
             low_end_straight=low_end_straight,
             order=order,
         )
@@ -131,29 +131,29 @@ class Bropoker(gym.Env):
         self.hole_cards: List[List[Card]] = []
         self.largest_raise = 0
         self.pot = 0
-        self.pot_commit = np.zeros(self.num_players, dtype=np.int32)
+        self.pot_commit = np.zeros(self.n_players, dtype=np.int32)
         self.stacks = np.full(
-            self.num_players,
+            self.n_players,
             self.start_stack,
             dtype=np.int32
         )
         self.street = 0
-        self.street_commits = np.zeros(self.num_players, dtype=np.int32)
-        self.street_option = np.zeros(self.num_players, dtype=np.uint8)
+        self.street_commits = np.zeros(self.n_players, dtype=np.int32)
+        self.street_option = np.zeros(self.n_players, dtype=np.uint8)
         self.street_raises = 0
 
         self.config = {
-            'num_players': self.num_players,
-            'num_streets': self.num_streets,
+            'n_players': self.n_players,
+            'n_streets': self.n_streets,
             'blinds': self.blinds,
             'antes': self.antes,
             'raise_sizes': self.raise_sizes,
-            'num_raises': self.num_raises,
-            'num_suits': self.num_suits,
-            'num_ranks': self.num_ranks,
-            'num_hole_cards': self.num_hole_cards,
-            'num_community_cards': self.num_community_cards,
-            'num_cards_for_hand': self.num_cards_for_hand,
+            'n_raises': self.n_raises,
+            'n_suits': self.n_suits,
+            'n_ranks': self.n_ranks,
+            'n_hole_cards': self.n_hole_cards,
+            'n_community_cards': self.n_community_cards,
+            'n_cards_for_hand': self.n_cards_for_hand,
             'start_stack': self.start_stack,
             'rake': self.rake,
             'button': self.button + 1,
@@ -199,7 +199,7 @@ class Bropoker(gym.Env):
         '''
         if reset_stacks:
             self.active.fill(1)
-            self.stacks = np.full(self.num_players, self.start_stack)
+            self.stacks = np.full(self.n_players, self.start_stack)
         else:
             self.active = self.stacks > 0
             if sum(self.active) <= 1:
@@ -209,14 +209,14 @@ class Bropoker(gym.Env):
         if reset_button:
             self.button = 0
         else:
-            self.button = self.button + 1 % self.num_players
+            self.button = self.button + 1 % self.n_players
 
         self.deck.shuffle()
-        self.community_cards = self.deck.draw(self.num_community_cards[0])
+        self.community_cards = self.deck.draw(self.n_community_cards[0])
         self.history = []
         self.hole_cards = [
-            self.deck.draw(self.num_hole_cards) for _
-            in range(self.num_players)
+            self.deck.draw(self.n_hole_cards) for _
+            in range(self.n_players)
         ]
         self.largest_raise = self.big_blind
         self.pot = 0
@@ -228,25 +228,25 @@ class Bropoker(gym.Env):
 
         self.player = self.button
         # in heads up button posts small blind
-        if self.num_players > 2:
+        if self.n_players > 2:
             self.__move_action()
-        self.__collect_multiple_bets(bets=self.antes, street_commits=False)
-        self.__collect_multiple_bets(bets=self.blinds, street_commits=True)
+        self.__collect_multiple_actions(actions=self.antes, street_commits=False)
+        self.__collect_multiple_actions(actions=self.blinds, street_commits=True)
         self.__move_action()
         self.__move_action()
         return self.__observation()
 
-    def step(self, bet: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
-        '''Advances poker game to next player. If the bet is 0, it is
+    def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
+        '''Advances poker game to next player. If the action is 0, it is
         either considered a check or fold, depending on the previous
         action. The given bet is always rounded to the closest valid bet
         size. When it is the same distance from two valid bet sizes
-        the smaller bet size is used, e.g. if the min raise is 10 and
+        the smaller action size is used, e.g. if the min raise is 10 and
         the bet is 5, it is rounded down to 0.
 
         Parameters
         ----------
-        bet : int
+        action : int
             number of chips bet by player currently active
 
         Returns
@@ -280,26 +280,26 @@ class Bropoker(gym.Env):
                 'call reset() before calling first step()'
             )
 
-        fold = bet < 0
-        bet = round(bet)
+        fold = action < 0
+        action = round(action)
 
-        call, min_raise, max_raise = self.__bet_sizes()
-        # round bet to nearest sizing
-        bet = self.__clean_bet(bet, call, min_raise, max_raise)
+        call, min_raise, max_raise = self.__action_sizes()
+        # round action to nearest sizing
+        action = self.__clean_action(action, call, min_raise, max_raise)
 
         # only fold if player cannot check
-        if call and ((bet < call) or fold):
+        if call and ((action < call) or fold):
             self.active[self.player] = 0
-            bet = 0
+            action = 0
 
-        # if bet is full raise record as largest raise
-        if bet and (bet - call) >= self.largest_raise:
-            self.largest_raise = bet - call
+        # if action is full raise record as largest raise
+        if action and (action - call) >= self.largest_raise:
+            self.largest_raise = action - call
             self.street_raises += 1
 
-        self.__collect_bet(bet)
+        self.__collect_action(action)
 
-        self.history.append((self.player, int(bet), fold))
+        self.history.append((self.player, int(action), fold))
 
         self.street_option[self.player] = True
         self.__move_action()
@@ -312,13 +312,13 @@ class Bropoker(gym.Env):
             # community cards and evaluate hand
             while True:
                 self.street += 1
-                full_streets = self.street >= self.num_streets
+                full_streets = self.street >= self.n_streets
                 allin = self.active * (self.stacks == 0)
                 all_allin = sum(self.active) - sum(allin) <= 1
                 if full_streets:
                     break
                 self.community_cards += self.deck.draw(
-                    self.num_community_cards[self.street]
+                    self.n_community_cards[self.street]
                 )
                 if not all_allin:
                     break
@@ -350,8 +350,8 @@ class Bropoker(gym.Env):
             | np.logical_not(self.active)
         )
 
-    def __bet_sizes(self) -> Tuple[int, int, int]:
-        # call difference between commit and maximum commit
+    def __action_sizes(self) -> Tuple[int, int, int]:
+        # call difference actionween commit and maximum commit
         call = self.street_commits.max() - self.street_commits[self.player]
         # min raise at least largest previous raise
         # if limit game min and max raise equal to raise size
@@ -365,65 +365,65 @@ class Bropoker(gym.Env):
                 max_raise = self.stacks[self.player]
         # if maximum number of raises in street
         # was reached cap raise at 0
-        if self.street_raises >= self.num_raises[self.street]:
+        if self.street_raises >= self.n_raises[self.street]:
             min_raise = max_raise = 0
         # if last full raise was done by active player
         # (another player has raised less than minimum raise amount)
         # cap active players raise size to 0
         if self.street_raises and call < self.largest_raise:
             min_raise = max_raise = 0
-        # clip bets to stack size
+        # clip actions to stack size
         call = min(call, self.stacks[self.player])
         min_raise = min(min_raise, self.stacks[self.player])
         max_raise = min(max_raise, self.stacks[self.player])
         return call, min_raise, max_raise
 
     @staticmethod
-    def __clean_bet(
-        bet: int,
+    def __clean_action(
+        action: int,
         call: int,
         min_raise: int,
         max_raise: int
     ) -> int:
-        # find closest bet size to actual bet
+        # find closest action size to actual action
         # pessimistic approach: in ties order is fold/check -> call -> raise
         lst = [0, call, min_raise, max_raise]
-        idx = np.argmin(np.absolute(np.array(lst) - bet))
+        idx = np.argmin(np.absolute(np.array(lst) - action))
         # if call closest
         if idx == 1:
             return call
         # if min raise or max raise closest
         if idx in (2, 3):
-            return round(min(max_raise, max(min_raise, bet)))
+            return round(min(max_raise, max(min_raise, action)))
         # if fold closest
         return 0
 
-    def __collect_multiple_bets(
+    def __collect_multiple_actions(
         self,
-        bets: List[int],
+        actions: List[int],
         street_commits: bool = True
     ):
-        bets = np.roll(bets, self.player)
-        bets = (self.stacks > 0) * self.active * bets
+        actions = np.roll(actions, self.player)
+        actions = (self.stacks > 0) * self.active * actions
         if street_commits:
-            self.street_commits += bets
-        self.pot_commit += bets
-        self.pot += sum(bets)
-        self.stacks -= bets
+            self.street_commits += actions
+        self.pot_commit += actions
+        self.pot += sum(actions)
+        self.stacks -= actions
 
-    def __collect_bet(self, bet: int):
-        # bet only as large as stack size
-        bet = min(self.stacks[self.player], bet)
+    def __collect_action(self, action: int):
+        # action only as large as stack size
+        action = min(self.stacks[self.player], action)
 
-        self.pot += bet
-        self.pot_commit[self.player] += bet
-        self.street_commits[self.player] += bet
-        self.stacks[self.player] -= bet
+        self.pot += action
+        self.pot_commit[self.player] += action
+        self.street_commits[self.player] += action
+        self.stacks[self.player] -= action
 
     def __done(self) -> List[bool]:
-        if self.street >= self.num_streets or sum(self.active) <= 1:
+        if self.street >= self.n_streets or sum(self.active) <= 1:
             # end game
-            out = np.full(self.num_players, 1)
+            out = np.full(self.n_players, 1)
             return out
         return np.logical_not(self.active)
 
@@ -431,7 +431,7 @@ class Bropoker(gym.Env):
         if all(self.__done()):
             call = min_raise = max_raise = 0
         else:
-            call, min_raise, max_raise = self.__bet_sizes()
+            call, min_raise, max_raise = self.__action_sizes()
         community_cards = [str(card) for card in self.community_cards]
         hole_cards = [
             [str(card) for card in cards] for cards in self.hole_cards
@@ -454,12 +454,12 @@ class Bropoker(gym.Env):
         return obs
 
     def __payouts(self) -> np.ndarray:
-        # players that have folded lose their bets
+        # players that have folded lose their actions
         payouts = -1 * self.pot_commit * np.logical_not(self.active)
         if sum(self.active) == 1:
             payouts += self.active * (self.pot - self.pot_commit)
         # if last street played and still multiple players active
-        elif self.street >= self.num_streets:
+        elif self.street >= self.n_streets:
             payouts = self.__eval_round()
             payouts -= self.pot_commit
         if any(payouts > 0):
@@ -476,8 +476,8 @@ class Bropoker(gym.Env):
         # grab array of hand strength and pot commits
         worst_hand = self.judge.hashmap.max_rank + 1
         hand_list = []
-        payouts = np.zeros(self.num_players, dtype=int)
-        for player in range(self.num_players):
+        payouts = np.zeros(self.n_players, dtype=int)
+        for player in range(self.n_players):
             # if not active hand strength set
             # to 1 worse than worst possible rank
             hand_strength = worst_hand
@@ -513,7 +513,7 @@ class Bropoker(gym.Env):
         if remainder:
             # worst player is first player after button involved in pot
             involved_players = np.nonzero(payouts)[0]
-            button_shift = (involved_players <= self.button) * self.num_players
+            button_shift = (involved_players <= self.button) * self.n_players
             button_shifted_players = involved_players + button_shift
             worst_idx = np.argmin(button_shifted_players)
             worst_pos = involved_players[worst_idx]
@@ -521,8 +521,8 @@ class Bropoker(gym.Env):
         return payouts
 
     def __move_action(self):
-        for idx in range(1, self.num_players + 1):
-            player = (self.player + idx) % self.num_players
+        for idx in range(1, self.n_players + 1):
+            player = (self.player + idx) % self.n_players
             if self.active[player]:
                 break
             else:
@@ -556,9 +556,9 @@ class Bropoker(gym.Env):
             'prev_action': None if not self.history else self.history[-1],
             'street_commits': street_commits,
             'stacks': stacks,
-            'num_players': self.num_players,
-            'num_hole_cards': self.num_hole_cards,
-            'num_community_cards': sum(self.num_community_cards)
+            'n_players': self.n_players,
+            'n_hole_cards': self.n_hole_cards,
+            'n_community_cards': sum(self.n_community_cards)
         }
         return view.render(screen)
 
@@ -573,8 +573,8 @@ class Bropoker(gym.Env):
                 'call reset() before calling first step()'
             )
         player = self.prev_obs['player']
-        bet = self.agents[player].act(obs)
-        return bet
+        action = self.agents[player].act(obs)
+        return action
 
     def register_agents(self, agents: Union[List, Dict]) -> None:
         error_msg = 'invalid agent configuration, got {}, expected {}'
@@ -582,11 +582,11 @@ class Bropoker(gym.Env):
             raise errors.InvalidAgentConfigurationError(
                 error_msg.format(type(agents), 'list or dictionary of agents')
             )
-        if len(agents) != self.num_players:
+        if len(agents) != self.n_players:
             raise errors.InvalidAgentConfigurationError(
                 error_msg.format(
                     f'{len(agents)} number of agents',
-                    f'{self.num_players} number of agents',
+                    f'{self.n_players} number of agents',
                 )
             )
         if isinstance(agents, list):

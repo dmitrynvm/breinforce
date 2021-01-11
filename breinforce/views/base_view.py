@@ -4,24 +4,24 @@ class BaseView:
 
     Parameters
     ----------
-    num_players : int
+    n_players : int
         number of player
-    num_hole_cards : int
+    n_hole_cards : int
         number of hole cards
-    num_community_cards : int
+    n_community_cards : int
         number of community cards
     '''
 
     def __init__(
         self,
-        num_players: int,
-        num_hole_cards: int,
-        num_community_cards: int,
+        n_players: int,
+        n_hole_cards: int,
+        n_community_cards: int,
         **kwargs,
     ) -> None:
-        self.num_players = num_players
-        self.num_hole_cards = num_hole_cards
-        self.num_community_cards = num_community_cards
+        self.n_players = n_players
+        self.n_hole_cards = n_hole_cards
+        self.n_community_cards = n_community_cards
 
     def render(self, screen) -> None:
         '''Render the table based on the table configuration
