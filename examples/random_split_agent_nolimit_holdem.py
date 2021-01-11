@@ -1,7 +1,7 @@
 import gym
 from breinforce import agents, envs, views
 
-envs.configure()
+envs.Bropoker.configure()
 env = gym.make('CustomSixPlayer-v0')
 
 

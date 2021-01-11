@@ -6,7 +6,7 @@ from ray import tune
 
 from breinforce import agents, envs
 
-envs.configure()
+envs.Bropoker.configure()
 env = gym.make('CartPole-v0')
 # agents = [agents.RandomBaseAgent()] * 6
 # env.register_agents(agents)

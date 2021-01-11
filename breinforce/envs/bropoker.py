@@ -3,7 +3,7 @@ import gym
 from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 from breinforce.agents import BaseAgent
-from breinforce import errors, views
+from breinforce import configs, errors, views
 from breinforce.games.bropoker import Card, Deck, Judge
 
 
@@ -69,6 +69,60 @@ class Bropoker(gym.Env):
         order=None, hands are ranked by rarity. by default None
     '''
 
+    @staticmethod
+    def configure():
+        """
+        Merges the local configured envs to the global OpenAI Gym list.
+        """
+        try:
+            env_configs = {}
+            for name, config in configs.bropoker.__dict__.items():
+                if not name.endswith('_PLAYER'):
+                    continue
+                keywords = [sub_string.title() for sub_string in name.split('_')]
+                env_id = ''.join(keywords)
+                env_id += '-v0'
+                env_configs[env_id] = config
+            Bropoker.register(env_configs)
+        except ImportError:
+            pass
+
+    @staticmethod
+    def register(configs: Dict) -> None:
+        '''Registers dict of breinforce configs as gym environments
+
+        Parameters
+        ----------
+        configs : Dict
+            dictionary of bropoker configs, keys must environment ids and
+            values valid bropoker configs, example:
+                configs = {
+                    'NolimitHoldemTwoPlayer-v0': {
+                        'n_players': 2,
+                        'n_streets': 4,
+                        'blinds': [1, 2],
+                        'antes': 0,
+                        'raise_sizes': float('inf'),
+                        'n_raises': float('inf'),
+                        'n_suits': 4,
+                        'n_ranks': 13,
+                        'n_hole_cards': 2,
+                        'n_community_cards': [0, 3, 1, 1],
+                        'n_cards_for_hand': 5,
+                        'start_stack': 200
+                    }
+                }
+        '''
+        env_entry_point = 'breinforce.envs:Bropoker'
+        env_ids = [env_spec.id for env_spec in gym.envs.registry.all()]
+        for env_id, config in configs.items():
+            if env_id not in env_ids:
+                gym.envs.registration.register(
+                    id=env_id, entry_point=env_entry_point, kwargs={**config}
+                )
+
+
+
     def __init__(
         self,
         n_players: int,
@@ -88,23 +142,13 @@ class Bropoker(gym.Env):
         order: Optional[List[str]] = None,
     ) -> None:
 
-        def clean_rs(raise_size):
-            if isinstance(raise_size, (int, float)):
-                return raise_size
-            if raise_size == 'pot':
-                return raise_size
-            raise errors.InvalidRaiseSizeError(
-                f'unknown raise size, expected one of (int, float, pot),'
-                f' got {raise_size}'
-            )
-
         # config
         self.n_players = n_players
         self.n_streets = n_streets
         self.blinds = np.array(blinds)
         self.antes = np.array(antes)
         self.big_blind = blinds[1]
-        self.raise_sizes = [clean_rs(raise_size) for raise_size in raise_sizes]
+        self.raise_sizes = [self.__clean_rs(rs) for rs in raise_sizes]
         self.n_raises = [float(raise_num) for raise_num in n_raises]
         self.n_suits = n_suits
         self.n_ranks = n_ranks
@@ -235,6 +279,20 @@ class Bropoker(gym.Env):
         self.__move_action()
         self.__move_action()
         return self.__observation()
+
+    def act(self, obs: dict) -> int:
+        if self.agents is None:
+            raise errors.NoRegisteredAgentsError(
+                'register agents using env.register_agents(...) before'
+                'calling act(obs)'
+            )
+        if self.prev_obs is None:
+            raise errors.EnvironmentResetError(
+                'call reset() before calling first step()'
+            )
+        player = self.prev_obs['player']
+        action = self.agents[player].act(obs)
+        return action
 
     def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
         '''Advances poker game to next player. If the action is 0, it is
@@ -529,19 +587,17 @@ class Bropoker(gym.Env):
                 self.street_option[player] = True
         self.player = player
 
-    def act(self, obs: dict) -> int:
-        if self.agents is None:
-            raise errors.NoRegisteredAgentsError(
-                'register agents using env.register_agents(...) before'
-                'calling act(obs)'
-            )
-        if self.prev_obs is None:
-            raise errors.EnvironmentResetError(
-                'call reset() before calling first step()'
-            )
-        player = self.prev_obs['player']
-        action = self.agents[player].act(obs)
-        return action
+    
+    def __clean_rs(self, raise_size):
+        if isinstance(raise_size, (int, float)):
+            return raise_size
+        if raise_size == 'pot':
+            return raise_size
+        raise errors.InvalidRaiseSizeError(
+            f'unknown raise size, expected one of (int, float, pot),'
+            f' got {raise_size}'
+        )
+
 
     def register_agents(self, agents: Union[List, Dict]) -> None:
         error_msg = 'invalid agent configuration, got {}, expected {}'
