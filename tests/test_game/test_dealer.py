@@ -1,6 +1,6 @@
 # import random
 # import pytest
-# from breinforce import envs, errors
+# from breinforce import envs, exceptions
 # from breinforce.games.bropoker import Dealer
 
 
@@ -191,7 +191,7 @@
 #         stack == test_stack for stack, test_stack
 #         in zip(obs['stacks'], test_stacks)
 #     )
-#     with pytest.raises(errors.TooFewActivePlayersError):
+#     with pytest.raises(exceptions.TooFewActivePlayersError):
 #         dealer.reset()
 
 
@@ -285,7 +285,7 @@
 # def test_init_step():
 #     config = envs.configs.NOLIMIT_HOLDEM_TWO_PLAYER
 #     dealer = Dealer(**config)
-#     with pytest.raises(errors.HashMapResetError):
+#     with pytest.raises(exceptions.HashMapResetError):
 #         dealer.step(0)
 
 

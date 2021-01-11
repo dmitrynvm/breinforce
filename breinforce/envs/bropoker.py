@@ -638,7 +638,7 @@ class Bropoker(gym.Env):
             'active': self.active,
             'allin': self.active * (self.stacks == 0),
             'community_cards': self.community_cards,
-            'dealer': self.button,
+            'button': self.button,
             'done': all(self.__done()),
             'hole_cards': self.hole_cards,
             'pot': self.pot,

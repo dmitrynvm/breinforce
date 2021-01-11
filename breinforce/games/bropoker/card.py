@@ -2,7 +2,7 @@
 cards from a standard 52 card poker deck'''
 
 from typing import Union
-from breinforce import errors
+from breinforce import exceptions
 
 
 class Card:
@@ -57,7 +57,7 @@ class Card:
         try:
             rank_int = Card.RANKS_TO_INTS[rank_char]
         except KeyError:
-            raise errors.InvalidRankError(
+            raise exceptions.InvalidRankError(
                 (
                     f'invalid rank {rank_char}, choose one '
                     f'of {list(Card.RANKS_TO_INTS.keys())}'
@@ -66,7 +66,7 @@ class Card:
         try:
             suit_int = Card.SUITS_TO_INTS[suit_char]
         except KeyError:
-            raise errors.InvalidSuitError(
+            raise exceptions.InvalidSuitError(
                 (
                     f'invalid suit {suit_char}, choose one '
                     f'of {list(Card.SUITS_TO_INTS.keys())}'

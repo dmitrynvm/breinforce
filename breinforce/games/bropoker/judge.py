@@ -2,7 +2,7 @@
 
 import itertools
 from typing import List
-from breinforce import errors
+from breinforce import exceptions
 from .card import Card
 from .hashmap import HashMap
 
@@ -37,7 +37,7 @@ class Judge(object):
     ):
 
         if cards_for_hand < 1 or cards_for_hand > 5:
-            raise errors.InvalidHandSizeError(
+            raise exceptions.InvalidHandSizeError(
                 f'Evaluation for {cards_for_hand} '
                 f'card hands is not supported. '
                 f'bropoker currently supports 1-5 card poker hands'
@@ -121,7 +121,7 @@ class Judge(object):
             hand rank string
         '''
         if hand_rank < 0 or hand_rank > self.hashmap.max_rank:
-            raise errors.InvalidHandRankError(
+            raise exceptions.InvalidHandRankError(
                 (
                     f'invalid hand rank, expected 0 <= hand_rank'
                     f' <= {self.hashmap.max_rank}, got {hand_rank}'
@@ -131,7 +131,7 @@ class Judge(object):
         for hand in self.hashmap.ranked_hands:
             if hand_rank <= hand_dict[hand]['cumulative unsuited']:
                 return hand
-        raise errors.InvalidHandRankError(
+        raise exceptions.InvalidHandRankError(
             (
                 f'invalid hand rank, expected 0 <= hand_rank'
                 f' <= {self.hashmap.max_rank}, got {hand_rank}'
