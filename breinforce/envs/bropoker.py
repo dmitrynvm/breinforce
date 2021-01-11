@@ -4,10 +4,11 @@ import gym
 import numpy as np
 import os
 from typing import Dict, List, Optional, Tuple, Union
-from breinforce import errors, views
+from breinforce import exceptions
 from breinforce.agents import BaseAgent
 from breinforce.config.application import CONFIG_DIR
 from breinforce.games.bropoker import Card, Deck, Judge
+from breinforce.views import AsciiView
 from . import utils
 
 
@@ -246,7 +247,7 @@ class Bropoker(gym.Env):
         else:
             self.active = self.stacks > 0
             if sum(self.active) <= 1:
-                raise errors.TooFewActivePlayersError(
+                raise exceptions.TooFewActivePlayersError(
                     'not enough players have chips, set reset_stacks=True'
                 )
         if reset_button:
@@ -281,12 +282,12 @@ class Bropoker(gym.Env):
 
     def act(self, obs: dict) -> int:
         if self.agents is None:
-            raise errors.NoRegisteredAgentsError(
+            raise exceptions.NoRegisteredAgentsError(
                 'register agents using env.register_agents(...) before'
                 'calling act(obs)'
             )
         if self.prev_obs is None:
-            raise errors.EnvironmentResetError(
+            raise exceptions.EnvironmentResetError(
                 'call reset() before calling first step()'
             )
         player = self.prev_obs['player']
@@ -333,7 +334,7 @@ class Bropoker(gym.Env):
         if self.player == -1:
             if any(self.active):
                 return self.__output()
-            raise errors.HashMapResetError(
+            raise exceptions.HashMapResetError(
                 'call reset() before calling first step()'
             )
 
@@ -591,7 +592,7 @@ class Bropoker(gym.Env):
             return raise_size
         if raise_size == 'pot':
             return raise_size
-        raise errors.InvalidRaiseSizeError(
+        raise exceptions.InvalidRaiseSizeError(
             f'unknown raise size, expected one of (int, float, pot),'
             f' got {raise_size}'
         )
@@ -599,11 +600,11 @@ class Bropoker(gym.Env):
     def register_agents(self, agents: Union[List, Dict]) -> None:
         error_msg = 'invalid agent configuration, got {}, expected {}'
         if not isinstance(agents, (dict, list)):
-            raise errors.InvalidAgentConfigurationError(
+            raise exceptions.InvalidAgentConfigurationError(
                 error_msg.format(type(agents), 'list or dictionary of agents')
             )
         if len(agents) != self.n_players:
-            raise errors.InvalidAgentConfigurationError(
+            raise exceptions.InvalidAgentConfigurationError(
                 error_msg.format(
                     f'{len(agents)} number of agents',
                     f'{self.n_players} number of agents',
@@ -614,14 +615,14 @@ class Bropoker(gym.Env):
         else:
             agent_keys = list(agents.keys())
             if set(agent_keys) != set(range(len(agents))):
-                raise errors.InvalidAgentConfigurationError(
+                raise exceptions.InvalidAgentConfigurationError(
                     f'invalid agent configuration, got {agent_keys}, '
                     f'expected permutation of {list(range(len(agents)))}'
                 )
             agents = list(agents.values())
         all_base_agents = all(isinstance(a, BaseAgent) for a in agents)
         if not all_base_agents:
-            raise errors.InvalidAgentConfigurationError(
+            raise exceptions.InvalidAgentConfigurationError(
                 error_msg.format(
                     f'agent types {[type(_agent) for _agent in agents]}',
                     'only subtypes of breinforce.agents.BaseAgent',
@@ -630,32 +631,21 @@ class Bropoker(gym.Env):
         self.agents = dict(zip(agent_keys, agents))
 
     def render(self):
-        view = views.AsciiView()
-        player = self.player
-        active = self.active
-        allin = self.active * (self.stacks == 0)
-        community_cards = self.community_cards
-        dealer = self.button
-        done = all(self.__done())
-        hole_cards = self.hole_cards
-        pot = self.pot
-        payouts = self.__payouts()
-        street_commits = self.street_commits
-        stacks = self.stacks
+        view = AsciiView()
 
         screen = {
-            'player': player,
-            'active': active,
-            'allin': allin,
-            'community_cards': community_cards,
-            'dealer': dealer,
-            'done': done,
-            'hole_cards': hole_cards,
-            'pot': pot,
-            'payouts': payouts,
+            'player': self.player,
+            'active': self.active,
+            'allin': self.active * (self.stacks == 0),
+            'community_cards': self.community_cards,
+            'dealer': self.button,
+            'done': all(self.__done()),
+            'hole_cards': self.hole_cards,
+            'pot': self.pot,
+            'payouts': self.__payouts(),
             'prev_action': None if not self.history else self.history[-1],
-            'street_commits': street_commits,
-            'stacks': stacks,
+            'street_commits': self.street_commits,
+            'stacks': self.stacks,
             'n_players': self.n_players,
             'n_hole_cards': self.n_hole_cards,
             'n_community_cards': sum(self.n_community_cards)

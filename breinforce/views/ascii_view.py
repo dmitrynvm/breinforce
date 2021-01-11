@@ -113,7 +113,7 @@ class AsciiView(BaseView):
                     'allin': List[bool] - list of all in players,
                     'community_cards': List[Card] - list of community
                                        cards,
-                    'dealer': int - position of dealer,
+                    'button': int - position of button,
                     'done': bool - list of done players,
                     'hole_cards': List[List[Card]] - list of hole cards,
                     'pot': int - chips in pot,
@@ -133,7 +133,7 @@ class AsciiView(BaseView):
         self.n_community_cards = config['n_community_cards']
         self.player_pos = self.POS_DICT[self.n_players]
         player = config['player']
-        dealer = config['dealer']
+        button = config['button']
         done = config['done']
         positions = ['p{}'.format(idx) for idx in self.player_pos]
 
@@ -155,8 +155,8 @@ class AsciiView(BaseView):
         else:
             str_config['pot'] = '0'
 
-        # dealer + player positions
-        str_config['b{}'.format(self.player_pos[dealer])] = 'D '
+        # button + player positions
+        str_config['b{}'.format(self.player_pos[button])] = 'D '
         iterables = [
             players,
             config['street_commits'],
