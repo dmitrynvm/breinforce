@@ -2,8 +2,8 @@ import os
 from breinforce import views 
 
 
-class Recorder:
-    """Base recorder. Any recorder must subclass this recorder.
+class Monitor:
+    """Base monitor. Any recorder must subclass this recorder.
     """
 
     def __init__(self) -> None:

@@ -2,7 +2,6 @@ import gym
 from breinforce import agents, envs, views
 
 envs.configure()
-recorder = envs.Recorder()
 env = gym.make('CustomSixPlayer-v0')
 
 
@@ -71,7 +70,7 @@ view = views.HandsView(env.config)
 
 while True:
     action = env.act(obs)
-    # print(env.render())
+    print(env.render())
     hand = env.step(action)
     obs, rewards, done, info = hand
     if all(done):

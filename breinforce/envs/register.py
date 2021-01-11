@@ -8,8 +8,8 @@ def register(configs: Dict) -> None:
     Parameters
     ----------
     configs : Dict
-        dictionary of breinforce configs, keys must environment ids and
-        values valid breinforce configs, example:
+        dictionary of bropoker configs, keys must environment ids and
+        values valid bropoker configs, example:
             configs = {
                 'NolimitHoldemTwoPlayer-v0': {
                     'n_players': 2,
@@ -27,11 +27,10 @@ def register(configs: Dict) -> None:
                 }
             }
     '''
-    env_entry_point = 'breinforce.envs:BropokerEnv'
+    env_entry_point = 'breinforce.envs:Bropoker'
     env_ids = [env_spec.id for env_spec in gym.envs.registry.all()]
     for env_id, config in configs.items():
         if env_id not in env_ids:
             gym.envs.registration.register(
                 id=env_id, entry_point=env_entry_point, kwargs={**config}
             )
-        

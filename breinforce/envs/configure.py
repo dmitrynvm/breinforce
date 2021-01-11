@@ -1,4 +1,4 @@
-from breinforce import envs
+from breinforce import configs, envs
 
 
 def configure():
@@ -7,7 +7,7 @@ def configure():
     """
     try:
         env_configs = {}
-        for name, config in envs.configs.__dict__.items():
+        for name, config in configs.bropoker.__dict__.items():
             if not name.endswith('_PLAYER'):
                 continue
             keywords = [sub_string.title() for sub_string in name.split('_')]

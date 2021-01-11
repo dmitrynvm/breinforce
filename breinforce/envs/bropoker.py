@@ -7,7 +7,7 @@ from breinforce import errors, views
 from breinforce.games.bropoker import Card, Deck, Judge
 
 
-class BropokerEnv(gym.Env):
+class Bropoker(gym.Env):
     '''Runs a range of different of poker games dependent on the
     given configuration. Supports limit, no limit and pot limit
     bet sizing, arbitrary deck sizes, arbitrary hole and community
@@ -529,39 +529,6 @@ class BropokerEnv(gym.Env):
                 self.street_option[player] = True
         self.player = player
 
-    def render(self):
-        view = views.AsciiView()
-        player = self.player
-        active = self.active
-        allin = self.active * (self.stacks == 0)
-        community_cards = self.community_cards
-        dealer = self.button
-        done = all(self.__done())
-        hole_cards = self.hole_cards
-        pot = self.pot
-        payouts = self.__payouts()
-        street_commits = self.street_commits
-        stacks = self.stacks
-
-        screen = {
-            'player': player,
-            'active': active,
-            'allin': allin,
-            'community_cards': community_cards,
-            'dealer': dealer,
-            'done': done,
-            'hole_cards': hole_cards,
-            'pot': pot,
-            'payouts': payouts,
-            'prev_action': None if not self.history else self.history[-1],
-            'street_commits': street_commits,
-            'stacks': stacks,
-            'n_players': self.n_players,
-            'n_hole_cards': self.n_hole_cards,
-            'n_community_cards': sum(self.n_community_cards)
-        }
-        return view.render(screen)
-
     def act(self, obs: dict) -> int:
         if self.agents is None:
             raise errors.NoRegisteredAgentsError(
@@ -608,3 +575,36 @@ class BropokerEnv(gym.Env):
                 )
             )
         self.agents = dict(zip(agent_keys, agents))
+
+    def render(self):
+        view = views.AsciiView()
+        player = self.player
+        active = self.active
+        allin = self.active * (self.stacks == 0)
+        community_cards = self.community_cards
+        dealer = self.button
+        done = all(self.__done())
+        hole_cards = self.hole_cards
+        pot = self.pot
+        payouts = self.__payouts()
+        street_commits = self.street_commits
+        stacks = self.stacks
+
+        screen = {
+            'player': player,
+            'active': active,
+            'allin': allin,
+            'community_cards': community_cards,
+            'dealer': dealer,
+            'done': done,
+            'hole_cards': hole_cards,
+            'pot': pot,
+            'payouts': payouts,
+            'prev_action': None if not self.history else self.history[-1],
+            'street_commits': street_commits,
+            'stacks': stacks,
+            'n_players': self.n_players,
+            'n_hole_cards': self.n_hole_cards,
+            'n_community_cards': sum(self.n_community_cards)
+        }
+        return view.render(screen)
