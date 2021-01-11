@@ -1,5 +1,5 @@
 import setuptools
-from gym.version import VERSION
+from breinforce.constants import VERSION
 
 
 setuptools.setup(

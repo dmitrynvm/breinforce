@@ -1,10 +1,14 @@
 '''Classes and functions for running poker games'''
+import json
 import gym
-from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
+import os
+from typing import Dict, List, Optional, Tuple, Union
+from breinforce import errors, views
 from breinforce.agents import BaseAgent
-from breinforce import configs, errors, views
+from breinforce.constants import BASEDIR
 from breinforce.games.bropoker import Card, Deck, Judge
+from . import utils
 
 
 class Bropoker(gym.Env):
@@ -68,60 +72,6 @@ class Bropoker(gym.Env):
         ['sf', 'fk', 'fh', 'fl', 'st', 'tk', 'tp', 'pa', 'hc']. if
         order=None, hands are ranked by rarity. by default None
     '''
-
-    @staticmethod
-    def configure():
-        """
-        Merges the local configured envs to the global OpenAI Gym list.
-        """
-        try:
-            env_configs = {}
-            for name, config in configs.bropoker.__dict__.items():
-                if not name.endswith('_PLAYER'):
-                    continue
-                keywords = [sub_string.title() for sub_string in name.split('_')]
-                env_id = ''.join(keywords)
-                env_id += '-v0'
-                env_configs[env_id] = config
-            Bropoker.register(env_configs)
-        except ImportError:
-            pass
-
-    @staticmethod
-    def register(configs: Dict) -> None:
-        '''Registers dict of breinforce configs as gym environments
-
-        Parameters
-        ----------
-        configs : Dict
-            dictionary of bropoker configs, keys must environment ids and
-            values valid bropoker configs, example:
-                configs = {
-                    'NolimitHoldemTwoPlayer-v0': {
-                        'n_players': 2,
-                        'n_streets': 4,
-                        'blinds': [1, 2],
-                        'antes': 0,
-                        'raise_sizes': float('inf'),
-                        'n_raises': float('inf'),
-                        'n_suits': 4,
-                        'n_ranks': 13,
-                        'n_hole_cards': 2,
-                        'n_community_cards': [0, 3, 1, 1],
-                        'n_cards_for_hand': 5,
-                        'start_stack': 200
-                    }
-                }
-        '''
-        env_entry_point = 'breinforce.envs:Bropoker'
-        env_ids = [env_spec.id for env_spec in gym.envs.registry.all()]
-        for env_id, config in configs.items():
-            if env_id not in env_ids:
-                gym.envs.registration.register(
-                    id=env_id, entry_point=env_entry_point, kwargs={**config}
-                )
-
-
 
     def __init__(
         self,
@@ -206,6 +156,55 @@ class Bropoker(gym.Env):
 
         self.agents: Optional[Dict[int, BaseAgent]] = None
         self.prev_obs: Optional[Dict] = None
+
+    @staticmethod
+    def configure():
+        """
+        Merges the local configured envs to the global OpenAI Gym list.
+        """
+        try:
+            config_path = os.path.join(BASEDIR, 'configs', 'bropoker.json')
+            with open(config_path, 'r') as f:
+                configs = json.loads(f.read())
+                for name, config in configs.items():
+                    configs[name] = utils.parse_config(config)
+                    Bropoker.register(configs)
+        except ImportError:
+            pass
+
+    @staticmethod
+    def register(configs: Dict) -> None:
+        '''Registers dict of breinforce configs as gym environments
+
+        Parameters
+        ----------
+        configs : Dict
+            dictionary of bropoker configs, keys must environment ids and
+            values valid bropoker configs, example:
+                configs = {
+                    'NolimitHoldemTwoPlayer-v0': {
+                        'n_players': 2,
+                        'n_streets': 4,
+                        'blinds': [1, 2],
+                        'antes': 0,
+                        'raise_sizes': float('inf'),
+                        'n_raises': float('inf'),
+                        'n_suits': 4,
+                        'n_ranks': 13,
+                        'n_hole_cards': 2,
+                        'n_community_cards': [0, 3, 1, 1],
+                        'n_cards_for_hand': 5,
+                        'start_stack': 200
+                    }
+                }
+        '''
+        env_entry_point = 'breinforce.envs:Bropoker'
+        env_ids = [env_spec.id for env_spec in gym.envs.registry.all()]
+        for env_id, config in configs.items():
+            if env_id not in env_ids:
+                gym.envs.registration.register(
+                    id=env_id, entry_point=env_entry_point, kwargs={**config}
+                )
 
     def reset(
         self,
