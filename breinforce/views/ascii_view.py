@@ -32,73 +32,6 @@ class AsciiView(BaseView):
         f = open(tpl_path, 'r')
         self.template = f.read()
 
-    def _parse_players(self, config, done, player):
-        players = []
-        iterator = zip(
-            config['hole_cards'],
-            config['stacks'],
-            config['active']
-        )
-        for idx, (hand, stack, active) in enumerate(iterator):
-            if not active:
-                players.append(
-                    '{:2}. '.format(idx + 1)
-                    + ','.join(['--'] * self.n_hole_cards)
-                    + ' {:,}'.format(stack)
-                )
-                continue
-            if done or idx == player:
-                players.append(
-                    '{:2}. '.format(idx + 1)
-                    + ','.join([str(card) for card in hand])
-                    + ' {:,}'.format(stack)
-                )
-                continue
-            players.append(
-                '{:2}. '.format(idx + 1)
-                + ','.join(['??'] * self.n_hole_cards)
-                + ' {:,}'.format(stack)
-            )
-        return players
-
-    def _parse_string(self, config, done, positions):
-        action_string = ''
-        win_string = ''
-
-        prev_action = config['prev_action']
-        if prev_action is not None:
-            action_string = 'Player {} {}'
-            player, action, fold = prev_action
-            if fold:
-                action = 'folded '
-            else:
-                if action:
-                    action = 'action {} '.format(action)
-                else:
-                    action = 'checked '
-            action_string = action_string.format(player + 1, action)
-
-        if done:
-            win_string = 'Player'
-            if sum(payout > 0 for payout in config['payouts']) > 1:
-                win_string += 's {} won {} respectively'
-            else:
-                win_string += ' {} won {}'
-            players = []
-            payouts = []
-            for player, payout in enumerate(config['payouts']):
-                if payout > 0:
-                    players.append(str(player + 1))
-                    payouts.append(str(payout))
-            win_string = win_string.format(
-                ', '.join(players),
-                ', '.join(payouts)
-            )
-        else:
-            action_string += 'Action on Player {}'.format(config['player'] + 1)
-
-        return action_string, win_string
-
     def render(self, config: dict, **kwargs) -> str:
         '''Render ascii table representation based on the table
         configuration
@@ -182,3 +115,70 @@ class AsciiView(BaseView):
         string = self.template.format(**str_config)
 
         return string
+
+    def _parse_players(self, config, done, player):
+        players = []
+        iterator = zip(
+            config['hole_cards'],
+            config['stacks'],
+            config['active']
+        )
+        for idx, (hand, stack, active) in enumerate(iterator):
+            if not active:
+                players.append(
+                    '{:2}. '.format(idx + 1)
+                    + ','.join(['--'] * self.n_hole_cards)
+                    + ' {:,}'.format(stack)
+                )
+                continue
+            if done or idx == player:
+                players.append(
+                    '{:2}. '.format(idx + 1)
+                    + ','.join([str(card) for card in hand])
+                    + ' {:,}'.format(stack)
+                )
+                continue
+            players.append(
+                '{:2}. '.format(idx + 1)
+                + ','.join(['??'] * self.n_hole_cards)
+                + ' {:,}'.format(stack)
+            )
+        return players
+
+    def _parse_string(self, config, done, positions):
+        action_string = ''
+        win_string = ''
+
+        prev_action = config['prev_action']
+        if prev_action is not None:
+            action_string = 'Player {} {}'
+            player, action, fold = prev_action
+            if fold:
+                action = 'folded '
+            else:
+                if action:
+                    action = 'action {} '.format(action)
+                else:
+                    action = 'checked '
+            action_string = action_string.format(player + 1, action)
+
+        if done:
+            win_string = 'Player'
+            if sum(payout > 0 for payout in config['payouts']) > 1:
+                win_string += 's {} won {} respectively'
+            else:
+                win_string += ' {} won {}'
+            players = []
+            payouts = []
+            for player, payout in enumerate(config['payouts']):
+                if payout > 0:
+                    players.append(str(player + 1))
+                    payouts.append(str(payout))
+            win_string = win_string.format(
+                ', '.join(players),
+                ', '.join(payouts)
+            )
+        else:
+            action_string += 'Action on Player {}'.format(config['player'] + 1)
+
+        return action_string, win_string
