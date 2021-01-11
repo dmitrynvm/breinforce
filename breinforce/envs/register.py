@@ -27,7 +27,7 @@ def register(configs: Dict) -> None:
                 }
             }
     '''
-    env_entry_point = 'breinforce.envs:Bropoker'
+    env_entry_point = 'breinforce.envs:BropokerEnv'
     env_ids = [env_spec.id for env_spec in gym.envs.registry.all()]
     for env_id, config in configs.items():
         if env_id not in env_ids:

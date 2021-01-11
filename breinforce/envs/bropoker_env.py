@@ -7,7 +7,7 @@ from breinforce import errors, views
 from breinforce.games.bropoker import Card, Deck, Judge
 
 
-class Bropoker(gym.Env):
+class BropokerEnv(gym.Env):
     '''Runs a range of different of poker games dependent on the
     given configuration. Supports limit, no limit and pot limit
     bet sizing, arbitrary deck sizes, arbitrary hole and community
@@ -604,7 +604,7 @@ class Bropoker(gym.Env):
             raise errors.InvalidAgentConfigurationError(
                 error_msg.format(
                     f'agent types {[type(_agent) for _agent in agents]}',
-                    'only subtypes of bropoker.agent.BaseAgent',
+                    'only subtypes of breinforce.agents.BaseAgent',
                 )
             )
         self.agents = dict(zip(agent_keys, agents))
