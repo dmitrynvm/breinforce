@@ -1,6 +1,6 @@
 import os
-
-from . import BaseView
+from breinforce.views import BaseView
+from breinforce.config.application import VIEW_DIR
 
 
 class AsciiView(BaseView):
@@ -27,13 +27,10 @@ class AsciiView(BaseView):
         + ['sb', 'bb', 'ccs', 'pot', 'player']
     )
 
-    def __init__(self, template_name='ascii_table.txt') -> None:
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-
-        f = open('{}/{}'.format(dir_path, template_name), 'r')
+    def __init__(self, tpl_name='ascii_table.txt') -> None:
+        tpl_path = os.path.join(VIEW_DIR, tpl_name)
+        f = open(tpl_path, 'r')
         self.template = f.read()
-
-        
 
     def _parse_players(self, config, done, player):
         players = []

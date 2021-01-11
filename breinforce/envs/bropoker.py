@@ -586,7 +586,6 @@ class Bropoker(gym.Env):
                 self.street_option[player] = True
         self.player = player
 
-    
     def __clean_rs(self, raise_size):
         if isinstance(raise_size, (int, float)):
             return raise_size
@@ -596,7 +595,6 @@ class Bropoker(gym.Env):
             f'unknown raise size, expected one of (int, float, pot),'
             f' got {raise_size}'
         )
-
 
     def register_agents(self, agents: Union[List, Dict]) -> None:
         error_msg = 'invalid agent configuration, got {}, expected {}'
