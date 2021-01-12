@@ -1,8 +1,10 @@
 '''Classes and functions for running poker games'''
+from datetime import datetime
 import json
 import gym
 import numpy as np
 import os
+import uuid
 from typing import Dict, List, Optional, Tuple, Union
 from breinforce import exceptions
 from breinforce.agents import BaseAgent
@@ -10,6 +12,7 @@ from breinforce.config.application import CONFIG_DIR
 from breinforce.games.bropoker import Card, Deck, Judge
 from breinforce.views import AsciiView
 from . import utils
+# from zoneinfo import ZoneInfo , timezone
 
 
 class Bropoker(gym.Env):
@@ -107,6 +110,15 @@ class Bropoker(gym.Env):
         self.n_community_cards = n_community_cards
         self.n_cards_for_hand = n_cards_for_hand
         self.start_stack = start_stack
+
+        # auxilary
+        self.hand_id = 'h' + self._uuid(12, 'int')
+        self.date1 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
+        self.date2 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
+        self.table_id = 'table1'# + self._uuid(5, 'hex')
+        self.player_ids = [
+            'agent' + str(i) for i in range(self.n_players)
+        ]
 
         # dealer
         self.player = -1
@@ -207,11 +219,7 @@ class Bropoker(gym.Env):
                     id=env_id, entry_point=env_entry_point, kwargs={**config}
                 )
 
-    def reset(
-        self,
-        reset_button: bool = False,
-        reset_stacks: bool = False
-    ) -> Dict:
+    def reset(self) -> Dict:
         '''Resets the hash table. Shuffles the deck, deals new hole cards
         to all players, moves the button and collects blinds and antes.
 
@@ -241,20 +249,9 @@ class Bropoker(gym.Env):
                                     player on this street
                 }
         '''
-        if reset_stacks:
-            self.active.fill(1)
-            self.stacks = np.full(self.n_players, self.start_stack)
-        else:
-            self.active = self.stacks > 0
-            if sum(self.active) <= 1:
-                raise exceptions.TooFewActivePlayersError(
-                    'not enough players have chips, set reset_stacks=True'
-                )
-        if reset_button:
-            self.button = 0
-        else:
-            self.button = self.button + 1 % self.n_players
-
+        self.active.fill(1)
+        self.stacks = np.full(self.n_players, self.start_stack)
+        self.button = 0
         self.deck.shuffle()
         self.community_cards = self.deck.draw(self.n_community_cards[0])
         self.history = []
@@ -630,10 +627,24 @@ class Bropoker(gym.Env):
             )
         self.agents = dict(zip(agent_keys, agents))
 
-    def render(self):
-        view = AsciiView()
+    def _uuid(self, size, mode='hex'):
+        string = ''
+        if mode == 'int':
+            string = str(uuid.uuid4().int)[:size]
+        elif mode == 'hex':
+            string = uuid.uuid4().hex[:size]
+        return string
 
-        screen = {
+    def screen(self):
+        output = {
+            # auxilary
+            'table_id': self.table_id,
+            'hand_id': self.hand_id,
+            'date1': self.date1,
+            'date2': self.date2,
+            'player_ids': self.player_ids,
+            'hole_cards': self.hole_cards,
+            # config
             'player': self.player,
             'active': self.active,
             'allin': self.active * (self.stacks == 0),
@@ -650,4 +661,4 @@ class Bropoker(gym.Env):
             'n_hole_cards': self.n_hole_cards,
             'n_community_cards': sum(self.n_community_cards)
         }
-        return view.render(screen)
+        return output

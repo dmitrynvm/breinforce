@@ -27,20 +27,21 @@ class AsciiView(BaseView):
         + ['sb', 'bb', 'ccs', 'pot', 'player']
     )
 
-    def __init__(self, tpl_name='ascii_table.txt') -> None:
+    def __init__(self, env, tpl_name='ascii_table.txt') -> None:
+        self.env = env
         tpl_path = os.path.join(VIEW_DIR, tpl_name)
         f = open(tpl_path, 'r')
         self.template = f.read()
 
-    def render(self, config: dict, **kwargs) -> str:
+    def render(self) -> str:
         '''Render ascii table representation based on the table
-        configuration
+        screen
 
         Parameters
         ----------
-        config : dict
-            game configuration dictionary,
-                config = {
+        screen : dict
+            game screenuration dictionary,
+                screen = {
                     'player': int - position of active player,
                     'active': List[bool] - list of active players,
                     'allin': List[bool] - list of all in players,
@@ -60,68 +61,68 @@ class AsciiView(BaseView):
                     'stacks': List[int] - list of stack sizes,
                 }
         '''
-
-        self.n_players = config['n_players']
-        self.n_hole_cards = config['n_hole_cards']
-        self.n_community_cards = config['n_community_cards']
+        screen = self.env.screen()
+        self.n_players = screen['n_players']
+        self.n_hole_cards = screen['n_hole_cards']
+        self.n_community_cards = screen['n_community_cards']
         self.player_pos = self.POS_DICT[self.n_players]
-        player = config['player']
-        button = config['button']
-        done = config['done']
+        player = screen['player']
+        button = screen['button']
+        done = screen['done']
         positions = ['p{}'.format(idx) for idx in self.player_pos]
 
-        players = self._parse_players(config, done, player)
-        action_string, win_string = self._parse_string(config, done, positions)
+        players = self._parse_players(screen, done, player)
+        action_string, win_string = self._parse_string(screen, done, positions)
 
-        str_config = {key: '' for key in self.KEYS}
+        str_screen = {key: '' for key in self.KEYS}
 
         # community cards
-        ccs = [str(card) for card in config['community_cards']]
+        ccs = [str(card) for card in screen['community_cards']]
         ccs += ['--'] * (self.n_community_cards - len(ccs))
         ccs_string = '[' + ','.join(ccs) + ']'
-        str_config['ccs'] = ccs_string
+        str_screen['ccs'] = ccs_string
 
         # pot
         if not done:
-            str_config['pot'] = '{:,}'.format(config['pot'])
-            str_config['a{}'.format(self.player_pos[player])] = 'X'
+            str_screen['pot'] = '{:,}'.format(screen['pot'])
+            str_screen['a{}'.format(self.player_pos[player])] = 'X'
         else:
-            str_config['pot'] = '0'
+            str_screen['pot'] = '0'
 
         # button + player positions
-        str_config['b{}'.format(self.player_pos[button])] = 'B'
+        str_screen['b{}'.format(self.player_pos[button])] = 'B'
         iterables = [
             players,
-            config['street_commits'],
+            screen['street_commits'],
             positions,
-            config['allin']
+            screen['allin']
         ]
         for player, street_commit, pos, allin in zip(*iterables):
-            str_config[pos] = player
-            str_config[pos + 'c'] = '{:,}'.format(street_commit)
+            str_screen[pos] = player
+            str_screen[pos + 'c'] = '{:,}'.format(street_commit)
             if allin and not done:
-                str_config['a' + pos[1:]] = 'Allin'
+                str_screen['a' + pos[1:]] = 'Allin'
 
         # payouts
         if done:
-            iterables = [config['payouts'], positions]
+            iterables = [screen['payouts'], positions]
             for payout, pos in zip(*iterables):
-                str_config[pos + 'c'] = '{:,}'.format(payout)
+                str_screen[pos + 'c'] = '{:,}'.format(payout)
 
         # player + win string
-        str_config['player'] = action_string
-        str_config['win'] = win_string
+        str_screen['player'] = action_string
+        str_screen['win'] = win_string
 
-        string = self.template.format(**str_config)
+        string = self.template.format(**str_screen)
 
         return string
 
-    def _parse_players(self, config, done, player):
+    def _parse_players(self, screen, done, player):
         players = []
         iterator = zip(
-            config['hole_cards'],
-            config['stacks'],
-            config['active']
+            screen['hole_cards'],
+            screen['stacks'],
+            screen['active']
         )
         for idx, (hand, stack, active) in enumerate(iterator):
             if active:
@@ -139,11 +140,11 @@ class AsciiView(BaseView):
 
         return players
 
-    def _parse_string(self, config, done, positions):
+    def _parse_string(self, screen, done, positions):
         action_string = ''
         win_string = ''
 
-        prev_action = config['prev_action']
+        prev_action = screen['prev_action']
         if prev_action is not None:
             action_string = 'Player {} {}'
             player, action, fold = prev_action
@@ -158,13 +159,13 @@ class AsciiView(BaseView):
 
         if done:
             win_string = 'Player'
-            if sum(payout > 0 for payout in config['payouts']) > 1:
+            if sum(payout > 0 for payout in screen['payouts']) > 1:
                 win_string += 's {} won {} respectively'
             else:
                 win_string += ' {} won {}'
             players = []
             payouts = []
-            for player, payout in enumerate(config['payouts']):
+            for player, payout in enumerate(screen['payouts']):
                 if payout > 0:
                     players.append(str(player + 1))
                     payouts.append(str(payout))
@@ -173,6 +174,6 @@ class AsciiView(BaseView):
                 ', '.join(payouts)
             )
         else:
-            action_string += 'Action on Player {}'.format(config['player'] + 1)
+            action_string += 'Action on Player {}'.format(screen['player'] + 1)
 
         return action_string, win_string

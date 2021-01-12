@@ -1,6 +1,5 @@
 import gym
 from breinforce import agents, envs
-
 envs.Bropoker.configure()
 env = gym.make('CustomSixPlayer-v0')
 agents = [agents.RandomBaseAgent()] * 6

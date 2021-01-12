@@ -43,7 +43,14 @@ class Card:
         'C': 8,  # clubs
     }
 
-    PRETTY_SUITS = {
+    RAW_SUITS = {
+        1: 's',  # spades
+        2: 'h',  # hearts
+        4: 'd',  # diamonds
+        8: 'c',  # clubs
+    }
+
+    PRT_SUITS = {
         1: chr(9824),  # spades
         2: chr(9829),  # hearts
         4: chr(9830),  # diamonds
@@ -84,14 +91,16 @@ class Card:
     def __str__(self) -> str:
         suit_int = (self.value >> 12) & 0xF
         rank_int = (self.value >> 8) & 0xF
-
-        suit = Card.PRETTY_SUITS[suit_int]
+        suit = Card.PRT_SUITS[suit_int]
         rank = Card.STR_RANKS[rank_int]
-
         return f'{rank}{suit}'
 
     def __repr__(self) -> str:
-        return f'Card ({id(self)}): {str(self)}'
+        suit_int = (self.value >> 12) & 0xF
+        rank_int = (self.value >> 8) & 0xF
+        suit = Card.RAW_SUITS[suit_int]
+        rank = Card.STR_RANKS[rank_int]
+        return f'{rank}{suit}'
 
     def __and__(self, other: Union['Card', int]) -> int:
         if isinstance(other, Card):
