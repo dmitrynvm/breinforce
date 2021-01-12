@@ -119,6 +119,11 @@ class Bropoker(gym.Env):
         self.player_ids = [
             'agent' + str(i) for i in range(self.n_players)
         ]
+        self.start_stacks = np.full(
+            self.n_players,
+            self.start_stack,
+            dtype=np.int32
+        )
 
         # dealer
         self.player = -1
@@ -644,6 +649,7 @@ class Bropoker(gym.Env):
             'date2': self.date2,
             'player_ids': self.player_ids,
             'hole_cards': self.hole_cards,
+            'start_stacks': self.start_stacks,
             # config
             'player': self.player,
             'active': self.active,
