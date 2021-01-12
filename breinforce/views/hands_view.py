@@ -24,6 +24,8 @@ class HandsView(BaseView):
         player_ids = screen['player_ids']
         stacks = screen['stacks']
         hole_cards = screen['hole_cards']
+        community_cards = screen['community_cards']
+        flop_cards = screen['community_cards'][:3]
         header = f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
             f'($sb/$bb EUR) - {date1} MSK [{date2} ET]\n'
         preflop = f'Table \'{table_id}\' {n_players}-max' \
@@ -36,6 +38,7 @@ class HandsView(BaseView):
             player_id = player_ids[player]
             cards = str([repr(card) for card in hole_cards[player]])
             preflop += f'Dealt to {player_id} {cards}\n'
+        flop = f'*** FLOP CARDS *** {flop_cards}\n'
         #for item in history:
         #    print(item[0])
         self.string = header + preflop
