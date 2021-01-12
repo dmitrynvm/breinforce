@@ -147,7 +147,7 @@
         "n_hole_cards": 2,
         "n_cards_for_hand": 5,
         "start_stack": 200,
-        "raise_sizes": ["inf", "inf", "inf", "inf"],
+        "raise_sizes": [10, 10, 10, 10],
         "n_raises": ["inf", "inf", "inf", "inf"],
         "n_community_cards": [0, 3, 1, 1],
         "blinds": [1, 2, 0, 0, 0, 0],

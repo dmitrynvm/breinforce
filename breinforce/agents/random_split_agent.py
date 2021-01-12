@@ -5,8 +5,7 @@ from .split_agent import SplitAgent
 
 class RandomSplitAgent(SplitAgent):
 
-    def __init__(
-        self,
+    def __init__(self,
         actions: List[float],
         fracs: List[float],
         probs: List[float]

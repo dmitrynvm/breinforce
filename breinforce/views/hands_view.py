@@ -34,17 +34,20 @@ class HandsView(BaseView):
             f'Seat #{button} is the button\n'
         for i, stack in enumerate(stacks):
             user_id = player_ids[i]
-            preflop += f'Seat {i}: {user_id} (${stack} in chips)\n'
+            preflop += f'Seat {i+1}: {user_id} (${stack} in chips)\n'
+        #preflop, flop, turn, river = fact#['preflop']
+        #fact['flop']
         preflop += '*** HOLE CARDS ***\n'
         for player in range(n_players):
             player_id = player_ids[player]
             player_cards = repr(hole_cards[player])
             preflop += f'Dealt to {player_id} {player_cards}\n'
+
         flop = f'*** FLOP CARDS *** {flop_cards}\n'
+        flop += self.__subhistory(self.env.history)
         turn = f'*** TURN CARDS *** {turn_cards}\n'
         river = f'*** RIVER CARDS *** {river_cards}\n'
-        #for item in history:
-        #    print(item[0])
+        #print(type(self.env.history))
         self.string = header + preflop + flop + turn + river
         return self
 
@@ -60,3 +63,22 @@ class HandsView(BaseView):
         elif mode == 'hex':
             string = uuid.uuid4().hex[:size]
         return string
+
+    def __subhistory(self, subhistory):
+        output = ''
+        for item in subhistory:
+            player, action, info = item
+            output += f'Player{player+1} '
+            if info['folded']:
+                output += 'folds'
+            if info['checked']:
+                output += 'checks'
+            elif info['called']:
+                output += f"called ${info['called_amount']} chips"
+            elif info['raised']:
+                output += f"raised from ${info['raised_to']} to ${info['raised_from']}"
+            else:
+                output += f'bet {action}'
+            #print(output)
+            output += f"  {info['stage']}\n"
+        return output

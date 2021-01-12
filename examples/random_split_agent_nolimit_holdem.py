@@ -4,7 +4,7 @@ from breinforce.views import AsciiView, HandsView
 
 envs.Bropoker.configure()
 env = gym.make('CustomSixPlayer-v0')
-#ascii_view = AsciiView(env)
+ascii_view = AsciiView(env)
 hands_view = HandsView(env)
 
 actns = [
@@ -20,12 +20,12 @@ fracs = [
     None,
     0.5,
     1,
-    1,
+    2,
     float('inf')
 ]
 probs = [
     0.0,
-    0.1,
+    1.0,
     0.0,
     0.0,
     0.0,
@@ -38,7 +38,7 @@ obs = env.reset()
 
 while True:
     action = env.act(obs)
-    #print(ascii_view.render())
+    print(ascii_view.render())
     hand = env.step(action)
 
     obs, rewards, done, info = hand
@@ -46,4 +46,4 @@ while True:
         break
 
 print(hands_view.render())
-# print(view.render(history))
+#print(env.history)

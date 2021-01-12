@@ -1,4 +1,4 @@
-PokerStars Hand #174088855475:  Hold'em No Limit ($50/$100) - 2017/08/08 23:16:30 MSK [2017/08/08 16:16:30 ET]
+PokerStars Hand #174088855475:  Hold'em No Limit ($50/$100/$200) - 2017/08/08 23:16:30 MSK [2017/08/08 16:16:30 ET]
 Table 'Euphemia II' 6-max Seat #3 is the button
 Seat 1: adevlupec (53368 in chips) 
 Seat 2: Dette32 (10845 in chips) 
@@ -6,9 +6,9 @@ Seat 3: Drug08 (9686 in chips)
 Seat 4: FluffyStutt (11326 in chips) 
 FluffyStutt: posts small blind 50
 adevlupec: posts big blind 100
+Dette32: posts straddle 200 [optional] #4 and more people, hh specifics, 2 * bb
 *** HOLE CARDS ***
 Dealt to FluffyStutt [2h Ks]
-FluffyStutt said, "nh"
 Dette32: calls 100
 Drug08: calls 100
 FluffyStutt: folds 
@@ -26,7 +26,7 @@ adevlupec: checks
 Dette32: checks 
 Drug08: checks 
 *** SHOW DOWN ***
-adevlupec: shows [Qs Ts] (two pair, Tens and Eights)
+adevlupec: shows [Qs Ts] (two pair, Tens and Eights) $all showed
 Dette32: mucks hand 
 Drug08: mucks hand 
 adevlupec collected 332 from pot

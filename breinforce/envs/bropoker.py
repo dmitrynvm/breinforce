@@ -117,13 +117,14 @@ class Bropoker(gym.Env):
         self.date2 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
         self.table_id = 'table1'# + self._uuid(5, 'hex')
         self.player_ids = [
-            'agent' + str(i) for i in range(self.n_players)
+            'agent' + str(i+1) for i in range(self.n_players)
         ]
         self.start_stacks = np.full(
             self.n_players,
             self.start_stack,
             dtype=np.int32
         )
+        self.street_names = ['preflop', 'flop', 'turn', 'river']
 
         # dealer
         self.player = -1
@@ -139,7 +140,7 @@ class Bropoker(gym.Env):
             low_end_straight=low_end_straight,
             order=order,
         )
-        self.history: List[Tuple[int, int, bool]] = []
+        self.history = []
         self.hole_cards: List[List[Card]] = []
         self.largest_raise = 0
         self.pot = 0
@@ -259,7 +260,7 @@ class Bropoker(gym.Env):
         self.button = 0
         self.deck.shuffle()
         self.community_cards = self.deck.draw(self.n_community_cards[0])
-        self.history = []
+        self.history = []#{street: [] for street in range(self.n_streets)}
         self.hole_cards = [
             self.deck.draw(self.n_hole_cards) for _
             in range(self.n_players)
@@ -342,25 +343,42 @@ class Bropoker(gym.Env):
 
         fold = action < 0
         action = round(action)
+        folded = fold
 
         call, min_raise, max_raise = self.__action_sizes()
         # round action to nearest sizing
         action = self.__clean_action(action, call, min_raise, max_raise)
 
         # only fold if player cannot check
+        #
+        called = call > 0 and action == call
+        checked = call == 0 and action == 0
+
         if call and ((action < call) or fold):
             self.active[self.player] = 0
             action = 0
-
+            called = True
         # if action is full raise record as largest raise
+        checked = call == 0 and action == 0
+        raised = call > 0 and action > 0
         if action and (action - call) >= self.largest_raise:
             self.largest_raise = action - call
             self.street_raises += 1
 
         self.__collect_action(action)
-
-        self.history.append((self.player, int(action), fold))
-
+        action = int(action)
+        street_name = self.street_names[self.street]
+        info = {
+            'stage': street_name,
+            'folded': folded,
+            'checked': checked,
+            'called': called,
+            'called_amount': call,
+            'raised': raised,
+            'raised_from': call,
+            'raised_to': call + action
+        }
+        self.history.append((self.player, action, info))
         self.street_option[self.player] = True
         self.__move_action()
 
