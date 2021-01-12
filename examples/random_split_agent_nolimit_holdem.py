@@ -23,11 +23,11 @@ fracs = [
 ]
 probs = [
     0.0,
-    0.2,
-    0.2,
-    0.2,
-    0.2,
-    0.2
+    0.1,
+    0.0,
+    0.0,
+    0.0,
+    0.0
 ]
 
 agents = [agents.RandomSplitAgent(actns, fracs, probs)] * 6

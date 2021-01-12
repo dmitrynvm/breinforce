@@ -11,7 +11,6 @@ i = 0
 while True:
     action = env.act(obs)
     obs, rewards, done, info = env.step(action)
-    print(obs['active'])
     i += 1
     if all(done):
         break

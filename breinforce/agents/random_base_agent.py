@@ -1,5 +1,5 @@
 import random
-from breinforce.agents import BaseAgent
+from .base_agent import BaseAgent
 
 
 class RandomBaseAgent(BaseAgent):

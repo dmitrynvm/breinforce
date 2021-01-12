@@ -12,7 +12,7 @@ FluffyStutt said, "nh"
 Dette32: calls 100
 Drug08: calls 100
 FluffyStutt: folds 
-adevlupec: checks 
+adevlupec: checks
 *** FLOP *** [8h 7s 8d]
 adevlupec: checks 
 Dette32: checks 

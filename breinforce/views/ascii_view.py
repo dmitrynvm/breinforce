@@ -89,7 +89,7 @@ class AsciiView(BaseView):
             str_config['pot'] = '0'
 
         # button + player positions
-        str_config['b{}'.format(self.player_pos[button])] = 'D '
+        str_config['b{}'.format(self.player_pos[button])] = 'B'
         iterables = [
             players,
             config['street_commits'],
@@ -100,7 +100,7 @@ class AsciiView(BaseView):
             str_config[pos] = player
             str_config[pos + 'c'] = '{:,}'.format(street_commit)
             if allin and not done:
-                str_config['a' + pos[1:]] = 'A'
+                str_config['a' + pos[1:]] = 'Allin'
 
         # payouts
         if done:
@@ -124,25 +124,19 @@ class AsciiView(BaseView):
             config['active']
         )
         for idx, (hand, stack, active) in enumerate(iterator):
-            if not active:
-                players.append(
-                    '{:2}. '.format(idx + 1)
-                    + ','.join(['--'] * self.n_hole_cards)
-                    + ' {:,}'.format(stack)
-                )
-                continue
-            if done or idx == player:
+            if active:
                 players.append(
                     '{:2}. '.format(idx + 1)
                     + ','.join([str(card) for card in hand])
                     + ' {:,}'.format(stack)
                 )
-                continue
-            players.append(
-                '{:2}. '.format(idx + 1)
-                + ','.join(['??'] * self.n_hole_cards)
-                + ' {:,}'.format(stack)
-            )
+            else:                
+                players.append(
+                    '{:2}. '.format(idx + 1)
+                    + ','.join(['--'] * self.n_hole_cards)
+                    + ' {:,}'.format(stack)
+                )
+
         return players
 
     def _parse_string(self, config, done, positions):

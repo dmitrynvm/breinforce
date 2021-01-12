@@ -1,26 +1,26 @@
 import random
 from typing import List
-from breinforce.agents import SplitAgent
+from .split_agent import SplitAgent
 
 
 class RandomSplitAgent(SplitAgent):
 
     def __init__(
         self,
-        legal_actions: List[float],
-        split: List[float],
+        actions: List[float],
+        fracs: List[float],
         probs: List[float]
     ):
-        super().__init__(legal_actions, split)
+        super().__init__(actions, fracs)
         self.probs = probs
 
     def act(self, obs):
-        ids = list(range(len(self.legal_actions)))
+        ids = list(range(len(self.actions)))
         i = random.choices(ids, self.probs)[0]
-        action = self.legal_actions[i]
-        split = self.fractions[i]
+        action = self.actions[i]
+        frac = self.fracs[i]
         pot = obs['pot']
         call = obs['call']
         min_raise = obs['min_raise']
         max_raise = obs['max_raise']
-        return super().act(action, split, pot, call, min_raise, max_raise)
+        return super().act(action, frac, pot, call, min_raise, max_raise)
