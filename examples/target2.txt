@@ -25,11 +25,6 @@ Drug08: checks
 adevlupec: checks 
 Dette32: checks 
 Drug08: checks 
-*** SHOW DOWN ***
-adevlupec: shows [Qs Ts] (two pair, Tens and Eights) $all showed
-Dette32: mucks hand 
-Drug08: mucks hand 
-adevlupec collected 332 from pot
 *** SUMMARY ***
 Total pot 350 | Rake 18 
 Board [8h 7s 8d Th 2c]

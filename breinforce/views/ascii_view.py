@@ -101,7 +101,7 @@ class AsciiView(BaseView):
             str_screen[pos] = player
             str_screen[pos + 'c'] = '{:,}'.format(street_commit)
             if allin and not done:
-                str_screen['a' + pos[1:]] = 'Allin'
+                str_screen['a' + pos[1:]] = 'A'
 
         # payouts
         if done:

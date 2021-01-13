@@ -28,6 +28,8 @@ class HandsView(BaseView):
         player_ids = screen['player_ids']
         stacks = screen['start_stacks']
         hole_cards = screen['hole_cards']
+        pot = screen['pot']
+        rake = screen['rake']
         community_cards = screen['community_cards']
         flop_cards = repr(community_cards[:3])
         turn_cards = repr(community_cards[:3]) + '[' + repr(community_cards[3]) + ']'
@@ -38,11 +40,13 @@ class HandsView(BaseView):
             f'(${sb}/${bb}/${st} EUR) - {date1} MSK\n'# [{date2} ET]\n'
         # Table
         output += f'Table \'{table_id}\' {n_players}-max' \
-            f'Seat #{button} is the button\n'
+            f'Seat #{button + 1} is the button\n'
         # Seats
         for i, stack in enumerate(stacks):
             user_id = player_ids[i]
             output += f'Seat {i+1}: {user_id} (${stack} in chips)\n'
+        # Preflop
+        output += self.__subhistory(self.env.history, 0)
         # Dealt
         output += '*** HOLE CARDS ***\n'
         for player in range(n_players):
@@ -50,17 +54,26 @@ class HandsView(BaseView):
             player_cards = repr(hole_cards[player])
             output += f'Dealt to {player_id} {player_cards}\n'
         # Preflop
-        output += self.__subhistory(self.env.history, 0)
-        # Flop
-        output += f'*** FLOP CARDS *** {flop_cards}\n'
         output += self.__subhistory(self.env.history, 1)
-        # Preflop
-        output += f'*** TURN CARDS *** {turn_cards}\n'
-        output += self.__subhistory(self.env.history, 2)
+        # Flop
+        flop = self.__subhistory(self.env.history, 2)
+        if flop:
+            output += f'*** FLOP CARDS *** {flop_cards}\n'
+            output += flop
+        # Turn
+        turn = self.__subhistory(self.env.history, 3)
+        if turn:
+            output += f'*** TURN CARDS *** {turn_cards}\n'
+            output += turn
         # River
-        output += f'*** RIVER CARDS *** {river_cards}\n'
-        output += self.__subhistory(self.env.history, 3)
+        river = self.__subhistory(self.env.history, 4)
+        if river:
+            output += f'*** RIVER CARDS *** {river_cards}\n'
+            output += river
         #print(type(self.env.history))
+        # Summary
+        output += f'*** SUMMARY ***\n'
+        output += f'Total pot {pot} | rake {rake}'
         self.string = output
         return self
 
@@ -83,14 +96,18 @@ class HandsView(BaseView):
             player, action, info = item
             if info['street'] == street:
                 output += f'Player{player+1} '
-                if info['folded']:
+                if info['action_type'] == 'small_blind':
+                    output += f'posts small blind ${action}'
+                elif info['action_type'] == 'big_blind':
+                    output += f'posts big blind ${action}'
+                elif info['action_type'] == 'fold':
                     output += 'folds'
-                if info['checked']:
+                elif info['action_type'] == 'check':
                     output += 'checks'
-                elif info['called']:
-                    output += f"called ${info['called_amount']} chips"
-                elif info['raised']:
-                    output += f"raised from ${info['raised_to']} to ${info['raised_from']}"
+                elif info['action_type'] == 'call':
+                    output += f"called ${action} chips"
+                elif info['action_type'] == 'raise':
+                    output += f"raised from ${info['min_raise']-action} to ${info['min_raise']}"
                 else:
                     output += f'bet {action}'
                 output += '\n'

@@ -38,7 +38,7 @@ obs = env.reset()
 
 while True:
     action = env.act(obs)
-    print(ascii_view.render())
+    #print(ascii_view.render())
     hand = env.step(action)
 
     obs, rewards, done, info = hand
@@ -46,4 +46,5 @@ while True:
         break
 
 print(hands_view.render())
-#print(env.history)
+#for item in env.history:
+#    print(item)

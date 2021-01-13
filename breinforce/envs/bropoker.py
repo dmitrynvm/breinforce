@@ -274,6 +274,15 @@ class Bropoker(gym.Env):
 
         self.player = self.button
         # in heads up button posts small blind
+        info = {'street': 0, 'action_type': 'small_blind'}
+        self.history.append((self.button, self.blinds[0], info))
+        if self.n_players > 2:
+            info = {'street': 0, 'action_type': 'big_blind'}
+            self.history.append((self.button + 1, self.blinds[1], info))
+        if self.n_players > 3:
+            info = {'street': 0, 'action_type': 'big_blind'}
+            self.history.append((self.button + 2, self.blinds[2], info))
+
         if self.n_players > 2:
             self.__move_action()
         self.__collect_multiple_actions(actions=self.antes, street_commits=False)
@@ -342,17 +351,12 @@ class Bropoker(gym.Env):
 
         fold = action < 0
         action = round(action)
-        folded = fold
 
         call, min_raise, max_raise = self.__action_sizes()
         # round action to nearest sizing
         action = self.__clean_action(action, call, min_raise, max_raise)
 
         # only fold if player cannot check
-        #
-        called = call > 0 and action == call
-        checked = call == 0 and action == 0
-
         if call and ((action < call) or fold):
             self.active[self.player] = 0
             action = 0
@@ -365,15 +369,21 @@ class Bropoker(gym.Env):
             self.street_raises += 1
         self.__collect_action(action)
         action = int(action)
+        action_type = None
+        #if self.street == 0:
+        #    print('PREFLOP', min_raise, max_raise, action, self.player)
+        if action < 0:
+            action_type = 'fold'
+        elif action == 0:
+            action_type = 'check'
+        elif action == min_raise:
+            action_type = 'call'
+        else:
+            action_type = 'raise'
         info = {
-            'street': self.street,
-            'folded': folded,
-            'checked': checked,
-            'called': called,
-            'called_amount': call,
-            'raised': raised,
-            'raised_from': call,
-            'raised_to': call + action
+            'street': self.street + 1,
+            'action_type': action_type,
+            'min_raise': min_raise
         }
         self.history.append((self.player, action, info))
         self.street_option[self.player] = True
@@ -683,6 +693,7 @@ class Bropoker(gym.Env):
             'stacks': self.stacks,
             'n_players': self.n_players,
             'n_hole_cards': self.n_hole_cards,
-            'n_community_cards': sum(self.n_community_cards)
+            'n_community_cards': sum(self.n_community_cards),
+            'rake': self.rake
         }
         return output
