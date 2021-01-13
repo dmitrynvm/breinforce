@@ -14,6 +14,7 @@ class HandsView(BaseView):
     def render(self) -> str:
         '''Render representation based on the table configuration
         '''
+        output = ''
         screen = self.env.screen()
         hand_id = screen['hand_id']
         table_id = screen['table_id']
@@ -28,28 +29,36 @@ class HandsView(BaseView):
         flop_cards = repr(community_cards[:3])
         turn_cards = repr(community_cards[:3]) + '[' + repr(community_cards[3]) + ']'
         river_cards = repr(community_cards[:4]) + '[' + repr(community_cards[4]) + ']'
-        header = f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
+
+        # Header
+        output += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
             f'($sb/$bb EUR) - {date1} MSK [{date2} ET]\n'
-        preflop = f'Table \'{table_id}\' {n_players}-max' \
+        # Table
+        output += f'Table \'{table_id}\' {n_players}-max' \
             f'Seat #{button} is the button\n'
+        # Seats
         for i, stack in enumerate(stacks):
             user_id = player_ids[i]
-            preflop += f'Seat {i+1}: {user_id} (${stack} in chips)\n'
-        preflop += '*** HOLE CARDS ***\n'
+            output += f'Seat {i+1}: {user_id} (${stack} in chips)\n'
+        # Dealt
+        output += '*** HOLE CARDS ***\n'
         for player in range(n_players):
             player_id = player_ids[player]
             player_cards = repr(hole_cards[player])
-            preflop += f'Dealt to {player_id} {player_cards}\n'
-
-        preflop += self.__subhistory(self.env.history, 0)
-        flop = f'*** FLOP CARDS *** {flop_cards}\n'
-        flop += self.__subhistory(self.env.history, 1)
-        turn = f'*** TURN CARDS *** {turn_cards}\n'
-        turn += self.__subhistory(self.env.history, 2)
-        river = f'*** RIVER CARDS *** {river_cards}\n'
-        river += self.__subhistory(self.env.history, 3)
+            output += f'Dealt to {player_id} {player_cards}\n'
+        # Preflop
+        output += self.__subhistory(self.env.history, 0)
+        # Flop
+        output = f'*** FLOP CARDS *** {flop_cards}\n'
+        output += self.__subhistory(self.env.history, 1)
+        # Preflop
+        output = f'*** TURN CARDS *** {turn_cards}\n'
+        output += self.__subhistory(self.env.history, 2)
+        # River
+        output = f'*** RIVER CARDS *** {river_cards}\n'
+        output += self.__subhistory(self.env.history, 3)
         #print(type(self.env.history))
-        self.string = header + preflop + flop + turn + river
+        self.string = output
         return self
 
     def __str__(self):
