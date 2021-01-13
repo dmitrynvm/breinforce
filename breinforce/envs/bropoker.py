@@ -112,7 +112,7 @@ class Bropoker(gym.Env):
         self.start_stack = start_stack
 
         # auxilary
-        self.hand_id = 'h' + self._uuid(12, 'int')
+        self.hand_id = 'hand1'#'h' + self._uuid(12, 'int')
         self.date1 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
         self.date2 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
         self.table_id = 'table1'# + self._uuid(5, 'hex')
@@ -363,7 +363,6 @@ class Bropoker(gym.Env):
         if action and (action - call) >= self.largest_raise:
             self.largest_raise = action - call
             self.street_raises += 1
-
         self.__collect_action(action)
         action = int(action)
         info = {
@@ -660,6 +659,9 @@ class Bropoker(gym.Env):
         output = {
             # auxilary
             'table_id': self.table_id,
+            'sb': self.blinds[0],
+            'bb': self.blinds[1],
+            'st': self.blinds[2] if self.n_players > 3 else None,
             'hand_id': self.hand_id,
             'date1': self.date1,
             'date2': self.date2,

@@ -17,6 +17,9 @@ class HandsView(BaseView):
         output = ''
         screen = self.env.screen()
         hand_id = screen['hand_id']
+        sb = screen['sb']
+        bb = screen['bb']
+        st = screen['st']
         table_id = screen['table_id']
         date1 = screen['date1']
         date2 = screen['date2']
@@ -32,7 +35,7 @@ class HandsView(BaseView):
 
         # Header
         output += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
-            f'($sb/$bb EUR) - {date1} MSK [{date2} ET]\n'
+            f'(${sb}/${bb}/${st} EUR) - {date1} MSK\n'# [{date2} ET]\n'
         # Table
         output += f'Table \'{table_id}\' {n_players}-max' \
             f'Seat #{button} is the button\n'
@@ -49,13 +52,13 @@ class HandsView(BaseView):
         # Preflop
         output += self.__subhistory(self.env.history, 0)
         # Flop
-        output = f'*** FLOP CARDS *** {flop_cards}\n'
+        output += f'*** FLOP CARDS *** {flop_cards}\n'
         output += self.__subhistory(self.env.history, 1)
         # Preflop
-        output = f'*** TURN CARDS *** {turn_cards}\n'
+        output += f'*** TURN CARDS *** {turn_cards}\n'
         output += self.__subhistory(self.env.history, 2)
         # River
-        output = f'*** RIVER CARDS *** {river_cards}\n'
+        output += f'*** RIVER CARDS *** {river_cards}\n'
         output += self.__subhistory(self.env.history, 3)
         #print(type(self.env.history))
         self.string = output
