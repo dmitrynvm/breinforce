@@ -35,18 +35,19 @@ class HandsView(BaseView):
         for i, stack in enumerate(stacks):
             user_id = player_ids[i]
             preflop += f'Seat {i+1}: {user_id} (${stack} in chips)\n'
-        #preflop, flop, turn, river = fact#['preflop']
-        #fact['flop']
         preflop += '*** HOLE CARDS ***\n'
         for player in range(n_players):
             player_id = player_ids[player]
             player_cards = repr(hole_cards[player])
             preflop += f'Dealt to {player_id} {player_cards}\n'
 
+        preflop += self.__subhistory(self.env.history, 0)
         flop = f'*** FLOP CARDS *** {flop_cards}\n'
-        flop += self.__subhistory(self.env.history)
+        flop += self.__subhistory(self.env.history, 1)
         turn = f'*** TURN CARDS *** {turn_cards}\n'
+        turn += self.__subhistory(self.env.history, 2)
         river = f'*** RIVER CARDS *** {river_cards}\n'
+        river += self.__subhistory(self.env.history, 3)
         #print(type(self.env.history))
         self.string = header + preflop + flop + turn + river
         return self
@@ -64,21 +65,21 @@ class HandsView(BaseView):
             string = uuid.uuid4().hex[:size]
         return string
 
-    def __subhistory(self, subhistory):
+    def __subhistory(self, subhistory, street):
         output = ''
         for item in subhistory:
             player, action, info = item
-            output += f'Player{player+1} '
-            if info['folded']:
-                output += 'folds'
-            if info['checked']:
-                output += 'checks'
-            elif info['called']:
-                output += f"called ${info['called_amount']} chips"
-            elif info['raised']:
-                output += f"raised from ${info['raised_to']} to ${info['raised_from']}"
-            else:
-                output += f'bet {action}'
-            #print(output)
-            output += f"  {info['stage']}\n"
+            if info['street'] == street:
+                output += f'Player{player+1} '
+                if info['folded']:
+                    output += 'folds'
+                if info['checked']:
+                    output += 'checks'
+                elif info['called']:
+                    output += f"called ${info['called_amount']} chips"
+                elif info['raised']:
+                    output += f"raised from ${info['raised_to']} to ${info['raised_from']}"
+                else:
+                    output += f'bet {action}'
+                output += '\n'
         return output

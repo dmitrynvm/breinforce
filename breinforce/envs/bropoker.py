@@ -124,7 +124,6 @@ class Bropoker(gym.Env):
             self.start_stack,
             dtype=np.int32
         )
-        self.street_names = ['preflop', 'flop', 'turn', 'river']
 
         # dealer
         self.player = -1
@@ -367,9 +366,8 @@ class Bropoker(gym.Env):
 
         self.__collect_action(action)
         action = int(action)
-        street_name = self.street_names[self.street]
         info = {
-            'stage': street_name,
+            'street': self.street,
             'folded': folded,
             'checked': checked,
             'called': called,
