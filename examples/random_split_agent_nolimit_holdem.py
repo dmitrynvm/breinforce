@@ -9,6 +9,7 @@ hands_view = HandsView(env)
 
 actns = [
     'fold',
+    'check',
     'call',
     'raise_half_pot',
     'raise_one_pot',
@@ -16,6 +17,7 @@ actns = [
     'allin'
 ]
 fracs = [
+    -float('inf'),
     0,
     None,
     0.5,
@@ -24,11 +26,12 @@ fracs = [
     float('inf')
 ]
 probs = [
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    0.0,
+    0.1,
+    0.1,
+    0.5,
+    0.1,
+    0.1,
+    0.1,
     0.0
 ]
 
@@ -46,5 +49,22 @@ while True:
         break
 
 print(hands_view.render())
-#for item in env.history:
-#    print(item)
+lines = ''
+for step, item in enumerate(env.history):
+    line = ''
+    state, player, action, info = item
+    line += f"street: {str(state['street']+1)}"
+    line += ', '
+    line += f'player: {player}'
+    line += ', '
+    line += f"min_raise: {state['min_raise']}"
+    line += ', '
+    line += f"max_raise: {state['max_raise']}"
+    line += ', '
+    line += f'action: {str(action).rjust(3)}'
+    if state['street'] == 0:
+        line += ', '
+        line += f"ante: {state['antes'][0]}"
+    line += f" -> pot: {state['pot']}"
+    lines += line + '\n'
+print(lines)

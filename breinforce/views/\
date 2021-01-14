@@ -37,10 +37,11 @@ class HandsView(BaseView):
         river_cards = repr(community_cards[:4]) + '[' + repr(community_cards[4]) + ']'
         self.payouts = state['payouts']
         self.summary = self.__summary()
+        print(self.summary)
 
         # Header
         output += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
-            f'(${sb}/${bb}/${st} chips) - {date1} MSK\n'# [{date2} ET]\n'
+            f'(${sb}/${bb}/${st} EUR) - {date1} MSK\n'# [{date2} ET]\n'
         # Table
         output += f'Table \'{table_id}\' {n_players}-max' \
             f'Seat #{button + 1} is the button\n'
@@ -75,9 +76,11 @@ class HandsView(BaseView):
             output += river
         # Summary
         output += f'*** SUMMARY ***\n'
-        output += f'Total pot {pot} | rake {pot * rake} -> {int(pot * rake)}\n'
+        output += f'Total pot {pot} | rake {int(pot * rake)}\n'
         output += f'Board {community_cards}\n'
-        output += self.__summary()
+
+        for i in range(n_players):
+            output += f'Seat {i+1}: result\n'
 
         self.string = output
         return self
@@ -98,15 +101,13 @@ class HandsView(BaseView):
     def __subhistory(self, subhistory, street):
         output = ''
         for item in subhistory:
-            state, player, action, info = item
+            player, action, info = item
             if info['street'] == street:
                 output += f'Player{player+1} '
                 if info['action_type'] == 'small_blind':
                     output += f'posts small blind ${action}'
                 elif info['action_type'] == 'big_blind':
                     output += f'posts big blind ${action}'
-                elif info['action_type'] == 'straddle':
-                    output += f'posts straddle ${action}'
                 elif info['action_type'] == 'fold':
                     output += 'folds'
                 elif info['action_type'] == 'check':
@@ -122,37 +123,31 @@ class HandsView(BaseView):
 
     def __summary(self):
         output = ''
-        n_players = self.state['n_players']
         results = self.__results()
         # won
-        for player, item in enumerate(results):
-            output += f"Seat {player+1}: {results[player]['name']} "
-            # role
-            if results[player]['role']:
-                output += f"({results[player]['role']}) "
-            # show
-            output += f"showed {results[player]['hole']} "
-            if results[player]['won']:
-                output += f"and won {results[player]['won']} "
-                output += f"with {results[player]['rank']}"
+        for item in results:
+            print(item)
+        '''
+        for i, payout in enumerate(self.payouts):
+            output += f"{} "
+            if results[i]['role']:
+                output += f"({results[i]['role']})"
+
             output += '\n'
+        '''
         return output
 
     def __results(self):
-        items = []
         n_players = self.state['n_players']
         payouts = self.payouts
-        hole_cards = self.state['hole_cards']
-        comm_cards = self.state['community_cards']
-        rake = self.state['rake']
+        items = []
         for player in range(n_players):
             item = {
-                'name': None,
-                'role': None,
-                'won': None,
-                'hole': hole_cards[player],
-                'rank': None,
-                'flop': None
+            'name': None,
+            'role': None,
+            'comb': None,
+            'won': None,
+            'flop': None
             }
             item['name'] = self.state['player_ids'][player]
             if player == 0:
@@ -164,9 +159,6 @@ class HandsView(BaseView):
             elif player == 3:
                 item['role'] = 'straddle'
             if payouts[player] > 0:
-                item['won'] = (1 - rake) * payouts[player]
-            rank_val = self.env.judge.evaluate(hole_cards[player], comm_cards)
-            rank = self.env.judge.get_rank_class(rank_val)
-            item['rank'] = rank
+                item['won'] = payouts[player]
             items.append(item)
         return items

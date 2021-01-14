@@ -66,7 +66,7 @@ class Bropoker(gym.Env):
     n_cards_for_hand : int
         number of cards for a valid poker hand, e.g. for texas hold'em
         n_cards_for_hand=5
-    start_stack : int
+    start_stacks : List[int]
         number of chips each player starts with
     low_end_straight : bool, optional
         toggle to include the low ace straight within valid hands, by
@@ -90,7 +90,7 @@ class Bropoker(gym.Env):
         n_hole_cards: int,
         n_community_cards: Union[int, List[int]],
         n_cards_for_hand: int,
-        start_stack: int,
+        start_stacks: List[int],
         low_end_straight: bool = True,
         rake: float = 0.0,
         order: Optional[List[str]] = None,
@@ -110,21 +110,20 @@ class Bropoker(gym.Env):
         self.n_hole_cards = n_hole_cards
         self.n_community_cards = n_community_cards
         self.n_cards_for_hand = n_cards_for_hand
-        self.start_stack = start_stack
 
         # auxilary
-        self.hand_id = 'hand1'#'h' + self._uuid(12, 'int')
+        self.hand_id = 'hand_1'#'h' + self._uuid(12, 'int')
         self.date1 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
         self.date2 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
-        self.table_id = 'table1'# + self._uuid(5, 'hex')
+        self.table_id = 'table_1'# + self._uuid(5, 'hex')
         self.player_ids = [
-            'agent' + str(i+1) for i in range(self.n_players)
+            'agent_' + str(i+1) for i in range(self.n_players)
         ]
-        self.start_stacks = np.full(
-            self.n_players,
-            self.start_stack,
-            dtype=np.int32
-        )
+        self.start_stacks = np.array(start_stacks)
+        self.payouts = None
+        self.call = None
+        self.min_raise = None
+        self.max_raise = None
 
         # dealer
         self.player = -1
@@ -145,11 +144,7 @@ class Bropoker(gym.Env):
         self.largest_raise = 0
         self.pot = 0
         self.pot_commit = np.zeros(self.n_players, dtype=np.int32)
-        self.stacks = np.full(
-            self.n_players,
-            self.start_stack,
-            dtype=np.int32
-        )
+        self.stacks = np.array(start_stacks)
         self.street = 0
         self.street_commits = np.zeros(self.n_players, dtype=np.int32)
         self.street_option = np.zeros(self.n_players, dtype=np.uint8)
@@ -167,10 +162,9 @@ class Bropoker(gym.Env):
             'n_hole_cards': self.n_hole_cards,
             'n_community_cards': self.n_community_cards,
             'n_cards_for_hand': self.n_cards_for_hand,
-            'start_stack': self.start_stack,
             'rake': self.rake,
             'button': self.button + 1,
-            'stacks': self.stacks
+            'stacks': self.start_stacks
         }
 
         self.agents: Optional[Dict[int, BaseAgent]] = None
@@ -213,7 +207,7 @@ class Bropoker(gym.Env):
                         'n_hole_cards': 2,
                         'n_community_cards': [0, 3, 1, 1],
                         'n_cards_for_hand': 5,
-                        'start_stack': 200
+                        'stacks': [200, 200]
                     }
                 }
         '''
@@ -256,7 +250,7 @@ class Bropoker(gym.Env):
                 }
         '''
         self.active.fill(1)
-        self.stacks = np.full(self.n_players, self.start_stack)
+        self.stacks = self.start_stacks
         self.button = 0
         self.deck.shuffle()
         self.community_cards = self.deck.draw(self.n_community_cards[0])
@@ -276,13 +270,13 @@ class Bropoker(gym.Env):
         self.player = self.button
         # in heads up button posts small blind
         info = {'street': 0, 'action_type': 'small_blind'}
-        self.history.append((self.button, self.blinds[0], info))
+        self.history.append((self.state(), self.button, self.blinds[0], info))
         if self.n_players > 2:
             info = {'street': 0, 'action_type': 'big_blind'}
-            self.history.append((self.button + 1, self.blinds[1], info))
+            self.history.append((self.state(), self.button + 1, self.blinds[1], info))
         if self.n_players > 3:
-            info = {'street': 0, 'action_type': 'big_blind'}
-            self.history.append((self.button + 2, self.blinds[2], info))
+            info = {'street': 0, 'action_type': 'straddle'}
+            self.history.append((self.state(), self.button + 2, self.blinds[2], info))
 
         if self.n_players > 2:
             self.__move_action()
@@ -354,6 +348,9 @@ class Bropoker(gym.Env):
         action = round(action)
 
         call, min_raise, max_raise = self.__action_sizes()
+        self.call = call
+        self.min_raise = min_raise
+        self.max_raise = max_raise
         # round action to nearest sizing
         action = self.__clean_action(action, call, min_raise, max_raise)
 
@@ -371,8 +368,6 @@ class Bropoker(gym.Env):
         self.__collect_action(action)
         action = int(action)
         action_type = None
-        #if self.street == 0:
-        #    print('PREFLOP', min_raise, max_raise, action, self.player)
         if action < 0:
             action_type = 'fold'
         elif action == 0:
@@ -386,7 +381,7 @@ class Bropoker(gym.Env):
             'action_type': action_type,
             'min_raise': min_raise
         }
-        self.history.append((self.player, action, info))
+        self.history.append((self.state(), self.player, action, info))
         self.street_option[self.player] = True
         self.__move_action()
 
@@ -413,13 +408,16 @@ class Bropoker(gym.Env):
             self.street_raises = 0
 
         obs, payouts, done, info = self.__output()
+        self.payouts = payouts
         if all(done):
             self.player = -1
             obs['player'] = -1
+            '''
             if self.rake != 0.0:
                 payouts = [
                     int(p * (1 - self.rake)) if p > 0 else p for p in payouts
                 ]
+            '''
         obs['hole_cards'] = obs['hole_cards'][obs['player']]
         return obs, payouts, done, None
 
@@ -437,7 +435,6 @@ class Bropoker(gym.Env):
         )
 
     def __action_sizes(self) -> Tuple[int, int, int]:
-        print('LARGEST', self.largest_raise)
         # call difference actionween commit and maximum commit
         call = self.street_commits.max() - self.street_commits[self.player]
         # min raise at least largest previous raise
@@ -688,13 +685,20 @@ class Bropoker(gym.Env):
             'button': self.button,
             'done': all(self.__done()),
             'pot': self.pot,
-            'payouts': self.__payouts(),
+            'payouts': self.payouts,
             'prev_action': None if not self.history else self.history[-1],
             'street_commits': self.street_commits,
             'stacks': self.stacks,
             'n_players': self.n_players,
             'n_hole_cards': self.n_hole_cards,
             'n_community_cards': sum(self.n_community_cards),
-            'rake': self.rake
+            'rake': self.rake,
+            'antes': self.antes,
+            'street': self.street,
+            'min_raise': self.min_raise,
+            'max_raise': self.max_raise
         }
         return output
+
+    def render(self, mode='ascii'):
+        return 'ascii'
