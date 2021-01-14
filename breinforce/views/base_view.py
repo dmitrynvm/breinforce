@@ -12,25 +12,17 @@ class BaseView:
         number of community cards
     '''
 
-    def __init__(
-        self,
-        n_players: int,
-        n_hole_cards: int,
-        n_community_cards: int,
-        **kwargs,
-    ) -> None:
-        self.n_players = n_players
-        self.n_hole_cards = n_hole_cards
-        self.n_community_cards = n_community_cards
+    def __init__(self) -> None:
+        pass
 
-    def render(self, screen) -> None:
+    def render(self) -> None:
         '''Render the table based on the table configuration
 
         Parameters
         ----------
-        screen : dict
-            screen configuration dictionary,
-                screen = {
+        state : dict
+            state configuration dictionary,
+                state = {
                     'player': int - position of active player,
                     'active': List[bool] - list of active players,
                     'allin': List[bool] - list of all in players,

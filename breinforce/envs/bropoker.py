@@ -101,7 +101,8 @@ class Bropoker(gym.Env):
         self.n_streets = n_streets
         self.blinds = np.array(blinds)
         self.antes = np.array(antes)
-        self.big_blind = blinds[1]
+        self.big_blind = blinds[0] if n_players > 2 else None
+        self.straddle = blinds[2] if n_players > 3 else None
         self.raise_sizes = [self.__clean_rs(rs) for rs in raise_sizes]
         self.n_raises = [float(raise_num) for raise_num in n_raises]
         self.n_suits = n_suits
@@ -436,6 +437,7 @@ class Bropoker(gym.Env):
         )
 
     def __action_sizes(self) -> Tuple[int, int, int]:
+        print('LARGEST', self.largest_raise)
         # call difference actionween commit and maximum commit
         call = self.street_commits.max() - self.street_commits[self.player]
         # min raise at least largest previous raise
@@ -443,7 +445,7 @@ class Bropoker(gym.Env):
         if isinstance(self.raise_sizes[self.street], int):
             max_raise = min_raise = self.raise_sizes[self.street] + call
         else:
-            min_raise = max(self.big_blind, self.largest_raise + call)
+            min_raise = max(self.straddle, self.largest_raise + call)
             if self.raise_sizes[self.street] == 'pot':
                 max_raise = self.pot + call * 2
             elif self.raise_sizes[self.street] == float('inf'):
@@ -665,7 +667,7 @@ class Bropoker(gym.Env):
             string = uuid.uuid4().hex[:size]
         return string
 
-    def screen(self):
+    def state(self):
         output = {
             # auxilary
             'table_id': self.table_id,
@@ -685,7 +687,6 @@ class Bropoker(gym.Env):
             'community_cards': self.community_cards,
             'button': self.button,
             'done': all(self.__done()),
-            'hole_cards': self.hole_cards,
             'pot': self.pot,
             'payouts': self.__payouts(),
             'prev_action': None if not self.history else self.history[-1],
