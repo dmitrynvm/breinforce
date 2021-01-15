@@ -7,4 +7,4 @@ class RandomBaseAgent(BaseAgent):
         super().__init__()
 
     def act(self, obs):
-        return random.randint(obs['min_raise'], obs['max_raise'])
+        return random.randint(obs["min_raise"], obs["max_raise"])

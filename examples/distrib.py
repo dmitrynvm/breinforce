@@ -7,7 +7,7 @@ from ray import tune
 from breinforce import agents, envs
 
 envs.Bropoker.configure()
-env = gym.make('CartPole-v0')
+env = gym.make("CartPole-v0")
 # agents = [agents.RandomBaseAgent()] * 6
 # env.register_agents(agents)
 # obs = env.reset()
@@ -16,12 +16,12 @@ env = gym.make('CartPole-v0')
 # while True:
 #     action = env.act(obs)
 #     obs, rewards, done, info = env.step(action)
-#     print(obs['active'])
+#     print(obs["active"])
 #     i += 1
 #     if all(done):
 #         break
 
-# print('Rewards', rewards)
+# print("Rewards", rewards)
 
 
 

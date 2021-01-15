@@ -6,9 +6,9 @@ from .random_split_agent import RandomSplitAgent
 
 
 __all__ = [
-    'BaseAgent',
-    'SplitAgent',
-    'KuhnAgent',
-    'RandomBaseAgent',
-    'RandomSplitAgent'
+    "BaseAgent",
+    "SplitAgent",
+    "KuhnAgent",
+    "RandomBaseAgent",
+    "RandomSplitAgent"
 ]

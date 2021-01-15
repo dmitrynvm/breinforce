@@ -1,4 +1,4 @@
-'''Classes and functions for running poker games'''
+"""Classes and functions for running poker games"""
 from datetime import datetime
 import json
 import gym
@@ -16,7 +16,7 @@ from . import utils
 
 
 class Bropoker(gym.Env):
-    '''Runs a range of different of poker games dependent on the
+    """Runs a range of different of poker games dependent on the
     given configuration. Supports limit, no limit and pot limit
     bet sizing, arbitrary deck sizes, arbitrary hole and community
     cards and many other options.
@@ -26,7 +26,7 @@ class Bropoker(gym.Env):
     n_players : int
         maximum number of players
     n_streets : int
-        number of streets including preflop, e.g. for texas hold'em
+        number of streets including preflop, e.g. for texas hold"em
         n_streets=4
     blinds : Union[int, List[int]]
         blind distribution as a list of ints, one for each player
@@ -40,13 +40,13 @@ class Bropoker(gym.Env):
         players i.e. pass antes=0 for no antes
     raise_sizes : Union[float, str, List[Union[float, str]]]
         max raise sizes for each street, valid raise sizes are ints,
-        floats, and 'pot', e.g. for a 1-2 limit hold'em the raise sizes
+        floats, and "pot", e.g. for a 1-2 limit hold"em the raise sizes
         should be [2, 2, 4, 4] as the small and big bet are 2 and 4.
-        float('inf') can be used for no limit games. pot limit raise
-        sizes can be set using 'pot'. if only a single int, float or
+        float("inf") can be used for no limit games. pot limit raise
+        sizes can be set using "pot". if only a single int, float or
         string is passed the value is expanded to a list the length
         of number of streets, e.g. for a standard no limit game pass
-        raise_sizes=float('inf')
+        raise_sizes=float("inf")
     n_raises : Union[float, List[float]]
         max number of bets for each street including preflop, valid
         raise numbers are ints and floats. if only a single int or float
@@ -60,64 +60,87 @@ class Bropoker(gym.Env):
         number of hole cards per player, must be greater than 0
     n_community_cards : Union[int, List[int]]
         number of community cards per street including preflop, e.g.
-        for texas hold'em pass n_community_cards=[0, 3, 1, 1]. if only
+        for texas hold"em pass n_community_cards=[0, 3, 1, 1]. if only
         a single int is passed, it is expanded to a list the length of
         number of streets
     n_cards_for_hand : int
-        number of cards for a valid poker hand, e.g. for texas hold'em
+        number of cards for a valid poker hand, e.g. for texas hold"em
         n_cards_for_hand=5
     start_stacks : List[int]
         number of chips each player starts with
-    low_end_straight : bool, optional
-        toggle to include the low ace straight within valid hands, by
-        default True
     order : Optional[List[str]], optional
         optional custom order of hand ranks, must be permutation of
-        ['sf', 'fk', 'fh', 'fl', 'st', 'tk', 'tp', 'pa', 'hc']. if
+        ["sf", "fk", "fh", "fl", "st", "tk", "tp", "pa", "hc"]. if
         order=None, hands are ranked by rarity. by default None
-    '''
+    """
+
+    @staticmethod
+    def configure():
+        """ Merges the local configured envs to the global OpenAI Gym list.
+        """
+        try:
+            config_path = os.path.join(CONFIG_DIR, "envs.json")
+            with open(config_path, "r") as f:
+                configs = json.loads(f.read())
+                for game in configs:
+                    for name, config in configs[game].items():
+                        configs[game][name] = utils.parse_config(config)
+                        Bropoker.register(configs[game])
+        except ImportError:
+            pass
+
+    @staticmethod
+    def register(configs: Dict) -> None:
+        """ Registers dict of breinforce configs as gym environments
+        """
+        env_entry_point = "breinforce.envs:Bropoker"
+        env_ids = [env_spec.id for env_spec in gym.envs.registry.all()]
+        for env_id, config in configs.items():
+            if env_id not in env_ids:
+                gym.envs.registration.register(
+                    id=env_id, entry_point=env_entry_point, kwargs={**config}
+                )
 
     def __init__(
-        self,
-        n_players: int,
-        n_streets: int,
-        blinds: List[int],
-        antes: List[int],
-        raise_sizes: List[float],
-        n_raises: List[float],
-        n_suits: int,
-        n_ranks: int,
-        n_hole_cards: int,
-        n_community_cards: List[int],
-        n_cards_for_hand: int,
-        start_stacks: List[int],
-        low_end_straight: bool = True,
-        rake: float = 0.0,
-        order: Optional[List[str]] = None,
+            self,
+            n_players: int,
+            n_streets: int,
+            n_suits: int,
+            n_ranks: int,
+            n_hole_cards: int,
+            n_cards_for_hand: int,
+            rake: float,
+            raise_sizes: List[float],
+            n_raises: List[float],
+            n_community_cards: List[int],
+            blinds: List[int],
+            antes: List[int],
+            start_stacks: List[int]
     ) -> None:
 
         # config
         self.n_players = n_players
         self.n_streets = n_streets
-        self.blinds = np.array(blinds)
-        self.antes = np.array(antes)
-        self.big_blind = blinds[0] if n_players > 2 else None
-        self.straddle = blinds[2] if n_players > 3 else None
-        self.raise_sizes = [self.__clean_rs(rs) for rs in raise_sizes]
-        self.n_raises = [float(raise_num) for raise_num in n_raises]
         self.n_suits = n_suits
         self.n_ranks = n_ranks
         self.n_hole_cards = n_hole_cards
-        self.n_community_cards = n_community_cards
         self.n_cards_for_hand = n_cards_for_hand
+        self.rake = rake
+        self.raise_sizes = [self.__clean(rs) for rs in raise_sizes]
+        self.n_raises = [float(raise_num) for raise_num in n_raises]
+        self.n_community_cards = n_community_cards
+        self.blinds = np.array(blinds)
+        self.antes = np.array(antes)
 
         # auxilary
-        self.hand_id = 'hand_1'#'h' + self._uuid(12, 'int')
-        self.date1 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
-        self.date2 = datetime.now().strftime('%b/%d/%Y %H:%M:%S')
-        self.table_id = 'table_1'# + self._uuid(5, 'hex')
+        self.big_blind = blinds[0] if n_players > 2 else None
+        self.straddle = blinds[2] if n_players > 3 else None
+        self.hand_id = "hand_1"
+        self.date1 = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
+        self.date2 = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
+        self.table_id = "table_1"
         self.player_ids = [
-            'agent_' + str(i+1) for i in range(self.n_players)
+            "agent_" + str(i+1) for i in range(self.n_players)
         ]
         self.start_stacks = np.array(start_stacks)
         self.payouts = None
@@ -129,20 +152,18 @@ class Bropoker(gym.Env):
         self.player = -1
         self.active = np.zeros(self.n_players, dtype=np.uint8)
         self.button = 0
-        self.community_cards: List[Card] = []
+        self.community_cards = []
         self.deck = Deck(self.n_suits, self.n_ranks)
-        self.rake = rake
         self.judge = Judge(
             self.n_suits,
             self.n_ranks,
             self.n_cards_for_hand,
-            low_end_straight=low_end_straight,
-            order=order,
+            low_end_straight=False
         )
-        self.history = []
-        self.hole_cards: List[List[Card]] = []
-        self.largest_raise = 0
         self.pot = 0
+        self.history = []
+        self.hole_cards = []
+        self.largest_raise = 0
         self.pot_commit = np.zeros(self.n_players, dtype=np.int32)
         self.stacks = np.array(start_stacks)
         self.street = 0
@@ -151,104 +172,29 @@ class Bropoker(gym.Env):
         self.street_raises = 0
 
         self.config = {
-            'n_players': self.n_players,
-            'n_streets': self.n_streets,
-            'blinds': self.blinds,
-            'antes': self.antes,
-            'raise_sizes': self.raise_sizes,
-            'n_raises': self.n_raises,
-            'n_suits': self.n_suits,
-            'n_ranks': self.n_ranks,
-            'n_hole_cards': self.n_hole_cards,
-            'n_community_cards': self.n_community_cards,
-            'n_cards_for_hand': self.n_cards_for_hand,
-            'rake': self.rake,
-            'button': self.button + 1,
-            'stacks': self.start_stacks
+            "n_players": self.n_players,
+            "n_streets": self.n_streets,
+            "blinds": self.blinds,
+            "antes": self.antes,
+            "raise_sizes": self.raise_sizes,
+            "n_raises": self.n_raises,
+            "n_suits": self.n_suits,
+            "n_ranks": self.n_ranks,
+            "n_hole_cards": self.n_hole_cards,
+            "n_community_cards": self.n_community_cards,
+            "n_cards_for_hand": self.n_cards_for_hand,
+            "rake": self.rake,
+            "button": self.button + 1,
+            "stacks": self.start_stacks
         }
 
         self.agents: Optional[Dict[int, BaseAgent]] = None
         self.prev_obs: Optional[Dict] = None
 
-    @staticmethod
-    def configure():
-        """
-        Merges the local configured envs to the global OpenAI Gym list.
-        """
-        try:
-            config_path = os.path.join(CONFIG_DIR, 'bropoker.json')
-            with open(config_path, 'r') as f:
-                configs = json.loads(f.read())
-                for name, config in configs.items():
-                    configs[name] = utils.parse_config(config)
-                    Bropoker.register(configs)
-        except ImportError:
-            pass
-
-    @staticmethod
-    def register(configs: Dict) -> None:
-        '''Registers dict of breinforce configs as gym environments
-
-        Parameters
-        ----------
-        configs : Dict
-            dictionary of bropoker configs, keys must environment ids and
-            values valid bropoker configs, example:
-                configs = {
-                    'NolimitHoldemTwoPlayer-v0': {
-                        'n_players': 2,
-                        'n_streets': 4,
-                        'blinds': [1, 2],
-                        'antes': 0,
-                        'raise_sizes': float('inf'),
-                        'n_raises': float('inf'),
-                        'n_suits': 4,
-                        'n_ranks': 13,
-                        'n_hole_cards': 2,
-                        'n_community_cards': [0, 3, 1, 1],
-                        'n_cards_for_hand': 5,
-                        'stacks': [200, 200]
-                    }
-                }
-        '''
-        env_entry_point = 'breinforce.envs:Bropoker'
-        env_ids = [env_spec.id for env_spec in gym.envs.registry.all()]
-        for env_id, config in configs.items():
-            if env_id not in env_ids:
-                gym.envs.registration.register(
-                    id=env_id, entry_point=env_entry_point, kwargs={**config}
-                )
-
     def reset(self) -> Dict:
-        '''Resets the hash table. Shuffles the deck, deals new hole cards
+        """Resets the hash table. Shuffles the deck, deals new hole cards
         to all players, moves the button and collects blinds and antes.
-
-        Parameters
-        ----------
-        reset_button : bool, optional
-            reset button to first position at table, by default False
-        reset_stacks : bool, optional
-            reset stack sizes to starting stack size, by default False
-
-        Returns
-        -------
-        Dict
-            observation dictionary containing following info
-
-                {
-                    active: position of active player
-                    button: position of button
-                    call: number of chips needed to call
-                    community_cards: shared community cards
-                    hole_cards: hole cards for every player
-                    max_raise: maximum raise size
-                    min_raise: minimum raise size
-                    pot: number of chips in the pot
-                    stacks: stack size for every player
-                    street_commits: number of chips commited by every
-                                    player on this street
-                }
-        '''
+        """
         self.active.fill(1)
         self.stacks = self.start_stacks
         self.button = 0
@@ -269,13 +215,13 @@ class Bropoker(gym.Env):
 
         self.player = self.button
         # in heads up button posts small blind
-        info = {'street': 0, 'action_type': 'small_blind'}
+        info = {"street": 0, "action_type": "small_blind"}
         self.history.append((self.state(), self.button, self.blinds[0], info))
         if self.n_players > 2:
-            info = {'street': 0, 'action_type': 'big_blind'}
+            info = {"street": 0, "action_type": "big_blind"}
             self.history.append((self.state(), self.button + 1, self.blinds[1], info))
         if self.n_players > 3:
-            info = {'street': 0, 'action_type': 'straddle'}
+            info = {"street": 0, "action_type": "straddle"}
             self.history.append((self.state(), self.button + 2, self.blinds[2], info))
 
         if self.n_players > 2:
@@ -289,19 +235,19 @@ class Bropoker(gym.Env):
     def act(self, obs: dict) -> int:
         if self.agents is None:
             raise exceptions.NoRegisteredAgentsError(
-                'register agents using env.register_agents(...) before'
-                'calling act(obs)'
+                "register agents using env.register_agents(...) before"
+                "calling act(obs)"
             )
         if self.prev_obs is None:
             raise exceptions.EnvironmentResetError(
-                'call reset() before calling first step()'
+                "call reset() before calling first step()"
             )
-        player = self.prev_obs['player']
+        player = self.prev_obs["player"]
         action = self.agents[player].act(obs)
         return action
 
     def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
-        '''Advances poker game to next player. If the action is 0, it is
+        """Advances poker game to next player. If the action is 0, it is
         either considered a check or fold, depending on the previous
         action. The given bet is always rounded to the closest valid bet
         size. When it is the same distance from two valid bet sizes
@@ -336,12 +282,12 @@ class Bropoker(gym.Env):
 
             bool array containing value for every player if that player
             is still involved in round
-        '''
+        """
         if self.player == -1:
             if any(self.active):
                 return self.__output()
             raise exceptions.HashMapResetError(
-                'call reset() before calling first step()'
+                "call reset() before calling first step()"
             )
 
         fold = action < 0
@@ -369,17 +315,17 @@ class Bropoker(gym.Env):
         action = int(action)
         action_type = None
         if action < 0:
-            action_type = 'fold'
+            action_type = "fold"
         elif action == 0:
-            action_type = 'check'
+            action_type = "check"
         elif action == min_raise:
-            action_type = 'call'
+            action_type = "call"
         else:
-            action_type = 'raise'
+            action_type = "raise"
         info = {
-            'street': self.street + 1,
-            'action_type': action_type,
-            'min_raise': min_raise
+            "street": self.street + 1,
+            "action_type": action_type,
+            "min_raise": min_raise
         }
         self.history.append((self.state(), self.player, action, info))
         self.street_option[self.player] = True
@@ -411,14 +357,14 @@ class Bropoker(gym.Env):
         self.payouts = payouts
         if all(done):
             self.player = -1
-            obs['player'] = -1
-            '''
+            obs["player"] = -1
+            """
             if self.rake != 0.0:
                 payouts = [
                     int(p * (1 - self.rake)) if p > 0 else p for p in payouts
                 ]
-            '''
-        obs['hole_cards'] = obs['hole_cards'][obs['player']]
+            """
+        obs["hole_cards"] = obs["hole_cards"][obs["player"]]
         return obs, payouts, done, None
 
     def __all_agreed(self) -> bool:
@@ -443,9 +389,9 @@ class Bropoker(gym.Env):
             max_raise = min_raise = self.raise_sizes[self.street] + call
         else:
             min_raise = max(self.straddle, self.largest_raise + call)
-            if self.raise_sizes[self.street] == 'pot':
+            if self.raise_sizes[self.street] == "pot":
                 max_raise = self.pot + call * 2
-            elif self.raise_sizes[self.street] == float('inf'):
+            elif self.raise_sizes[self.street] == float("inf"):
                 max_raise = self.stacks[self.player]
         # if maximum number of raises in street
         # was reached cap raise at 0
@@ -521,17 +467,17 @@ class Bropoker(gym.Env):
             [str(card) for card in cards] for cards in self.hole_cards
         ]
         obs: dict = {
-            'player': self.player,
-            'active': self.active,
-            'button': self.button,
-            'call': call,
-            'community_cards': community_cards,
-            'hole_cards': hole_cards,
-            'max_raise': max_raise,
-            'min_raise': min_raise,
-            'pot': self.pot,
-            'stacks': self.stacks,
-            'street_commits': self.street_commits,
+            "player": self.player,
+            "active": self.active,
+            "button": self.button,
+            "call": call,
+            "community_cards": community_cards,
+            "hole_cards": hole_cards,
+            "max_raise": max_raise,
+            "min_raise": min_raise,
+            "pot": self.pot,
+            "stacks": self.stacks,
+            "street_commits": self.street_commits,
         }
         if self.agents is not None:
             self.prev_obs = obs
@@ -613,27 +559,27 @@ class Bropoker(gym.Env):
                 self.street_option[player] = True
         self.player = player
 
-    def __clean_rs(self, raise_size):
+    def __clean(self, raise_size):
         if isinstance(raise_size, (int, float)):
             return raise_size
-        if raise_size == 'pot':
+        if raise_size == "pot":
             return raise_size
         raise exceptions.InvalidRaiseSizeError(
-            f'unknown raise size, expected one of (int, float, pot),'
-            f' got {raise_size}'
+            f"unknown raise size, expected one of (int, float, pot),"
+            f" got {raise_size}"
         )
 
     def register_agents(self, agents: Union[List, Dict]) -> None:
-        error_msg = 'invalid agent configuration, got {}, expected {}'
+        error_msg = "invalid agent configuration, got {}, expected {}"
         if not isinstance(agents, (dict, list)):
             raise exceptions.InvalidAgentConfigurationError(
-                error_msg.format(type(agents), 'list or dictionary of agents')
+                error_msg.format(type(agents), "list or dictionary of agents")
             )
         if len(agents) != self.n_players:
             raise exceptions.InvalidAgentConfigurationError(
                 error_msg.format(
-                    f'{len(agents)} number of agents',
-                    f'{self.n_players} number of agents',
+                    f"{len(agents)} number of agents",
+                    f"{self.n_players} number of agents",
                 )
             )
         if isinstance(agents, list):
@@ -642,63 +588,63 @@ class Bropoker(gym.Env):
             agent_keys = list(agents.keys())
             if set(agent_keys) != set(range(len(agents))):
                 raise exceptions.InvalidAgentConfigurationError(
-                    f'invalid agent configuration, got {agent_keys}, '
-                    f'expected permutation of {list(range(len(agents)))}'
+                    f"invalid agent configuration, got {agent_keys}, "
+                    f"expected permutation of {list(range(len(agents)))}"
                 )
             agents = list(agents.values())
         all_base_agents = all(isinstance(a, BaseAgent) for a in agents)
         if not all_base_agents:
             raise exceptions.InvalidAgentConfigurationError(
                 error_msg.format(
-                    f'agent types {[type(_agent) for _agent in agents]}',
-                    'only subtypes of breinforce.agents.BaseAgent',
+                    f"agent types {[type(_agent) for _agent in agents]}",
+                    "only subtypes of breinforce.agents.BaseAgent",
                 )
             )
         self.agents = dict(zip(agent_keys, agents))
 
-    def _uuid(self, size, mode='hex'):
-        string = ''
-        if mode == 'int':
+    def _uuid(self, size, mode="hex"):
+        string = ""
+        if mode == "int":
             string = str(uuid.uuid4().int)[:size]
-        elif mode == 'hex':
+        elif mode == "hex":
             string = uuid.uuid4().hex[:size]
         return string
 
     def state(self):
         output = {
             # auxilary
-            'table_id': self.table_id,
-            'sb': self.blinds[0],
-            'bb': self.blinds[1],
-            'st': self.blinds[2] if self.n_players > 3 else None,
-            'hand_id': self.hand_id,
-            'date1': self.date1,
-            'date2': self.date2,
-            'player_ids': self.player_ids,
-            'hole_cards': self.hole_cards,
-            'start_stacks': self.start_stacks,
+            "table_id": self.table_id,
+            "sb": self.blinds[0],
+            "bb": self.blinds[1],
+            "st": self.blinds[2] if self.n_players > 3 else None,
+            "hand_id": self.hand_id,
+            "date1": self.date1,
+            "date2": self.date2,
+            "player_ids": self.player_ids,
+            "hole_cards": self.hole_cards,
+            "start_stacks": self.start_stacks,
             # config
-            'player': self.player,
-            'active': self.active,
-            'allin': self.active * (self.stacks == 0),
-            'community_cards': self.community_cards,
-            'button': self.button,
-            'done': all(self.__done()),
-            'pot': self.pot,
-            'payouts': self.payouts,
-            'prev_action': None if not self.history else self.history[-1],
-            'street_commits': self.street_commits,
-            'stacks': self.stacks,
-            'n_players': self.n_players,
-            'n_hole_cards': self.n_hole_cards,
-            'n_community_cards': sum(self.n_community_cards),
-            'rake': self.rake,
-            'antes': self.antes,
-            'street': self.street,
-            'min_raise': self.min_raise,
-            'max_raise': self.max_raise
+            "player": self.player,
+            "active": self.active,
+            "allin": self.active * (self.stacks == 0),
+            "community_cards": self.community_cards,
+            "button": self.button,
+            "done": all(self.__done()),
+            "pot": self.pot,
+            "payouts": self.payouts,
+            "prev_action": None if not self.history else self.history[-1],
+            "street_commits": self.street_commits,
+            "stacks": self.stacks,
+            "n_players": self.n_players,
+            "n_hole_cards": self.n_hole_cards,
+            "n_community_cards": sum(self.n_community_cards),
+            "rake": self.rake,
+            "antes": self.antes,
+            "street": self.street,
+            "min_raise": self.min_raise,
+            "max_raise": self.max_raise
         }
         return output
 
-    def render(self, mode='ascii'):
-        return 'ascii'
+    def render(self, mode="ascii"):
+        return "ascii"

@@ -3,27 +3,27 @@ from breinforce import agents, envs, views
 from breinforce.views import AsciiView, HandsView
 
 envs.Bropoker.configure()
-env = gym.make('CustomSixPlayer-v0')
+env = gym.make("CustomSixPlayer-v0")
 ascii_view = AsciiView(env)
 hands_view = HandsView(env)
 
 actns = [
-    'fold',
-    'check',
-    'call',
-    'raise_half_pot',
-    'raise_one_pot',
-    'raise_two_pot',
-    'allin'
+    "fold",
+    "check",
+    "call",
+    "raise_half_pot",
+    "raise_one_pot",
+    "raise_two_pot",
+    "allin"
 ]
 fracs = [
-    -float('inf'),
+    -float("inf"),
     0,
     None,
     0.5,
     1,
     2,
-    float('inf')
+    float("inf")
 ]
 probs = [
     0.1,
@@ -49,22 +49,22 @@ while True:
         break
 
 print(hands_view.render())
-lines = ''
+lines = ""
 for step, item in enumerate(env.history):
-    line = ''
+    line = ""
     state, player, action, info = item
     line += f"street: {str(state['street']+1)}"
-    line += ', '
-    line += f'player: {player}'
-    line += ', '
+    line += ", "
+    line += f"player: {player}"
+    line += ", "
     line += f"min_raise: {state['min_raise']}"
-    line += ', '
+    line += ", "
     line += f"max_raise: {state['max_raise']}"
-    line += ', '
-    line += f'action: {str(action).rjust(3)}'
-    if state['street'] == 0:
-        line += ', '
+    line += ", "
+    line += f"action: {str(action).rjust(3)}"
+    if state["street"] == 0:
+        line += ", "
         line += f"ante: {state['antes'][0]}"
     line += f" -> pot: {state['pot']}"
-    lines += line + '\n'
+    lines += line + "\n"
 print(lines)

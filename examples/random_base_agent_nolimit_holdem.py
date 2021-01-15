@@ -1,7 +1,7 @@
 import gym
 from breinforce import agents, envs
 envs.Bropoker.configure()
-env = gym.make('CustomSixPlayer-v0')
+env = gym.make("CustomSixPlayer-v0")
 agents = [agents.RandomBaseAgent()] * 6
 env.register_agents(agents)
 obs = env.reset()
@@ -14,4 +14,4 @@ while True:
     if all(done):
         break
 
-print('Rewards', rewards)
+print("Rewards", rewards)

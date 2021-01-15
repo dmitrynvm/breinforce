@@ -4,7 +4,7 @@ from breinforce import agents, envs, exceptions
 
 
 def test_exceptions():
-    env = gym.make('NolimitHoldemTwoPlayer-v0')
+    env = gym.make("NolimitHoldemTwoPlayer-v0")
     with pytest.raises(exceptions.InvalidAgentConfigurationError):
         env.register_agents(None)
     with pytest.raises(exceptions.InvalidAgentConfigurationError):

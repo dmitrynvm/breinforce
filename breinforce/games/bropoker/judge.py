@@ -1,4 +1,4 @@
-'''Classes and functions to evaluate poker hands'''
+"""Classes and functions to evaluate poker hands"""
 
 import itertools
 from typing import List
@@ -8,7 +8,7 @@ from .hashmap import HashMap
 
 
 class Judge(object):
-    '''Evalutes poker hands using hole and community cards
+    """Evalutes poker hands using hole and community cards
 
     Parameters
     ----------
@@ -23,24 +23,24 @@ class Judge(object):
         default True
     order : list, optional
         optional custom order of hand ranks, must be permutation of
-        ['sf', 'fk', 'fh', 'fl', 'st', 'tk', 'tp', 'pa', 'hc']. if
+        ["sf", "fk", "fh", "fl", "st", "tk", "tp", "pa", "hc"]. if
         order=None, hands are ranked by rarity. by default None
-    '''
+    """
 
     def __init__(
-        self,
-        suits: int,
-        ranks: int,
-        cards_for_hand: int,
-        low_end_straight: bool = True,
-        order: list = None,
+            self,
+            suits: int,
+            ranks: int,
+            cards_for_hand: int,
+            low_end_straight: bool = False,
+            order: list = None,
     ):
 
         if cards_for_hand < 1 or cards_for_hand > 5:
             raise exceptions.InvalidHandSizeError(
-                f'Evaluation for {cards_for_hand} '
-                f'card hands is not supported. '
-                f'bropoker currently supports 1-5 card poker hands'
+                f"Evaluation for {cards_for_hand} "
+                f"card hands is not supported. "
+                f"bropoker currently supports 1-5 card poker hands"
             )
 
         self.suits = suits
@@ -57,26 +57,26 @@ class Judge(object):
 
         hand_dict = self.hashmap.hand_dict
         total = sum(
-            hand_dict[hand]['suited']
+            hand_dict[hand]["suited"]
             for hand in self.hashmap.ranked_hands
         )
 
         hands = [
-            '{} ({:.4%})'.format(hand, hand_dict[hand]['suited'] / total)
+            "{} ({:.4%})".format(hand, hand_dict[hand]["suited"] / total)
             for hand in self.hashmap.ranked_hands
         ]
-        self.hand_ranks = ' > '.join(hands)
+        self.hand_ranks = " > ".join(hands)
 
     def __str__(self) -> str:
         return self.hand_ranks
 
     def __repr__(self) -> str:
-        return f'Judge ({id(self)}): {str(self)}'
+        return f"Judge ({id(self)}): {str(self)}"
 
     def evaluate(
         self, hole_cards: List[Card], community_cards: List[Card]
     ) -> int:
-        '''Evaluates the hand rank of a poker hand from a list of hole
+        """Evaluates the hand rank of a poker hand from a list of hole
         and a list of community cards. Empty hole and community cards
         are supported as well as requiring a minimum number of hole
         cards to be used.
@@ -92,7 +92,7 @@ class Judge(object):
         -------
         int
             hand rank
-        '''
+        """
         all_card_combs = list(
             itertools.combinations(
                 hole_cards + community_cards, self.cards_for_hand
@@ -108,7 +108,7 @@ class Judge(object):
         return minimum
 
     def get_rank_class(self, hand_rank: int) -> str:
-        '''Outputs hand rank string from integer hand rank
+        """Outputs hand rank string from integer hand rank
 
         Parameters
         ----------
@@ -119,21 +119,21 @@ class Judge(object):
         -------
         str
             hand rank string
-        '''
+        """
         if hand_rank < 0 or hand_rank > self.hashmap.max_rank:
             raise exceptions.InvalidHandRankError(
                 (
-                    f'invalid hand rank, expected 0 <= hand_rank'
-                    f' <= {self.hashmap.max_rank}, got {hand_rank}'
+                    f"invalid hand rank, expected 0 <= hand_rank"
+                    f" <= {self.hashmap.max_rank}, got {hand_rank}"
                 )
             )
         hand_dict = self.hashmap.hand_dict
         for hand in self.hashmap.ranked_hands:
-            if hand_rank <= hand_dict[hand]['cumulative unsuited']:
+            if hand_rank <= hand_dict[hand]["cumulative unsuited"]:
                 return hand
         raise exceptions.InvalidHandRankError(
             (
-                f'invalid hand rank, expected 0 <= hand_rank'
-                f' <= {self.hashmap.max_rank}, got {hand_rank}'
+                f"invalid hand rank, expected 0 <= hand_rank"
+                f" <= {self.hashmap.max_rank}, got {hand_rank}"
             )
         )

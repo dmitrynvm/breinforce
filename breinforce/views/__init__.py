@@ -3,7 +3,7 @@ from .ascii_view import AsciiView
 from .hands_view import HandsView
 
 __all__ = [
-    'BaseView',
-    'AsciiView',
-    'HandsView'
+    "BaseView",
+    "AsciiView",
+    "HandsView"
 ]

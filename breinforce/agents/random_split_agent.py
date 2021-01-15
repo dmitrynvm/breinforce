@@ -18,8 +18,8 @@ class RandomSplitAgent(SplitAgent):
         i = random.choices(ids, self.probs)[0]
         action = self.actions[i]
         frac = self.fracs[i]
-        pot = obs['pot']
-        call = obs['call']
-        min_raise = obs['min_raise']
-        max_raise = obs['max_raise']
+        pot = obs["pot"]
+        call = obs["call"]
+        min_raise = obs["min_raise"]
+        max_raise = obs["max_raise"]
         return super().act(action, frac, pot, call, min_raise, max_raise)

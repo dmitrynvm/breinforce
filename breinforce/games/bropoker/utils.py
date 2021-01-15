@@ -25,7 +25,7 @@ def ncr(n, r):
 
 
 def prime_product_from_rankbits(rankbits: int) -> int:
-    '''Computes prime product from rankbits of cards, primarily used
+    """Computes prime product from rankbits of cards, primarily used
     for evaluating flushes and straights. Expects 13 bit integer
     with bits of the cards in the hand flipped.
 
@@ -38,7 +38,7 @@ def prime_product_from_rankbits(rankbits: int) -> int:
     -------
     int
         prime product of rank cards
-    '''
+    """
 
     product = 1
     for i in Card.INT_RANKS:
@@ -49,7 +49,7 @@ def prime_product_from_rankbits(rankbits: int) -> int:
 
 
 def prime_product_from_hand(cards: List[Card]) -> int:
-    '''Computes unique prime product for a list of cards. Used for
+    """Computes unique prime product for a list of cards. Used for
     evaluating hands
 
     Parameters
@@ -61,7 +61,7 @@ def prime_product_from_hand(cards: List[Card]) -> int:
     -------
     int
         prime product of cards
-    '''
+    """
 
     product = 1
     for card in cards:

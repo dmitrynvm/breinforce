@@ -12,14 +12,14 @@ class SplitAgent(BaseAgent):
 
     def act(self, action, frac, pot, call, min_raise, max_raise):
         bet = None
-        if 'fold' in action:
+        if "fold" in action:
             bet = -1
-        if 'check' in action:
+        if "check" in action:
             bet = 0
-        if 'call' in action:
+        if "call" in action:
             bet = call
-        if 'raise' in action:
+        if "raise" in action:
             bet = call + frac * pot
-        if 'allin' in action:
+        if "allin" in action:
             bet = max_raise
         return bet

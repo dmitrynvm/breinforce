@@ -1,5 +1,5 @@
-PokerStars Hand #174088855475:  Hold'em No Limit (1/2/4) - 2017/08/08 23:16:30 MSK [2017/08/08 16:16:30 ET]
-Table 'Euphemia II' 6-max Seat #3 is the button
+PokerStars Hand #174088855475:  Hold"em No Limit (1/2/4) - 2017/08/08 23:16:30 MSK [2017/08/08 16:16:30 ET]
+Table "Euphemia II" 6-max Seat #3 is the button
 Seat 1: adevlupec (53368 in chips) 
 Seat 2: Dette32 (10845 in chips) 
 Seat 3: Drug08 (9686 in chips) 

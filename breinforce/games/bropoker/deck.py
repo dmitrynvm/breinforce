@@ -5,7 +5,7 @@ from breinforce import exceptions
 
 
 class Deck:
-    '''A deck contains at most 52 cards, 13 ranks 4 suits. Any 'subdeck'
+    """A deck contains at most 52 cards, 13 ranks 4 suits. Any "subdeck"
     of the standard 52 card deck is valid, i.e. the number of suits
     must be between 1 and 4 and number of ranks between 1 and 13. A
     deck can be tricked to ensure a certain order of cards.
@@ -16,18 +16,18 @@ class Deck:
         number of suits to use in deck
     n_ranks : int
         number of ranks to use in deck
-    '''
+    """
 
     def __init__(self, n_suits: int, n_ranks: int) -> None:
         if n_ranks < 1 or n_ranks > 13:
             raise exceptions.InvalidRankError(
-                f'Invalid number of suits, expected number of suits '
-                f'between 1 and 13, got {n_ranks}'
+                f"Invalid number of suits, expected number of suits "
+                f"between 1 and 13, got {n_ranks}"
             )
         if n_suits < 1 or n_suits > 4:
             raise exceptions.InvalidSuitError(
-                f'Invalid number of suits, expected number of suits '
-                f'between 1 and 4, got {n_suits}'
+                f"Invalid number of suits, expected number of suits "
+                f"between 1 and 4, got {n_suits}"
             )
         self.n_ranks = n_ranks
         self.n_suits = n_suits
@@ -43,15 +43,15 @@ class Deck:
         self.shuffle()
 
     def __str__(self) -> str:
-        string = ','.join([str(card) for card in self.cards])
-        string = f'[{string}]'
+        string = ",".join([str(card) for card in self.cards])
+        string = f"[{string}]"
         return string
 
     def __repr__(self) -> str:
-        return f'Deck ({id(self)}): {str(self)}'
+        return f"Deck ({id(self)}): {str(self)}"
 
     def draw(self, n: int = 1) -> List[Card]:
-        '''Draws cards from the top of the deck. If the number of cards
+        """Draws cards from the top of the deck. If the number of cards
         to draw exceeds the number of cards in the deck, all cards
         left in the deck are returned.
 
@@ -64,7 +64,7 @@ class Deck:
         -------
         List[Card]
             cards drawn from the deck
-        '''
+        """
         cards = []
         for _ in range(n):
             if self.cards:
@@ -73,15 +73,15 @@ class Deck:
                 break
         return cards
 
-    def shuffle(self) -> 'Deck':
-        '''Shuffles the deck. If a tricking order is given, the desired
+    def shuffle(self) -> "Deck":
+        """Shuffles the deck. If a tricking order is given, the desired
         cards are placed on the top of the deck after shuffling.
 
         Returns
         -------
         Deck
             self
-        '''
+        """
         self.cards = list(self.full_deck)
         if self._tricked and self._top_idcs and self._bottom_idcs:
             top_cards = [self.full_deck[idx] for idx in self._top_idcs]
@@ -96,10 +96,10 @@ class Deck:
         self,
         top_cards: Optional[List[Union[str, Card]]] = None,
         shuffle: bool = True
-    ) -> 'Deck':
-        '''Tricks the deck by placing a fixed order of cards on the top
+    ) -> "Deck":
+        """Tricks the deck by placing a fixed order of cards on the top
         of the deck and shuffling the rest. E.g.
-        deck.trick(['AS', '2H']) places the ace of spades and deuce of
+        deck.trick(["AS", "2H"]) places the ace of spades and deuce of
         hearts on the top of the deck. The order of tricked cards
         persists even after untricking. That is, calling
         deck.trick(...).untrick().trick() will keep the deck tricked
@@ -117,7 +117,7 @@ class Deck:
         -------
         Deck
             self
-        '''
+        """
         if top_cards is None and not self._top_idcs:
             self._tricked = False
             return self.shuffle()
@@ -132,8 +132,8 @@ class Deck:
         self._tricked = True
         return self.shuffle()
 
-    def untrick(self) -> 'Deck':
-        '''Removes the tricked cards from the top of the deck. The order
+    def untrick(self) -> "Deck":
+        """Removes the tricked cards from the top of the deck. The order
         of tricked cards persists even after untricking. That is,
         calling deck.trick(...).untrick().trick() will keep the deck
         tricked in the order given in the first trick call.
@@ -142,6 +142,6 @@ class Deck:
         -------
         Deck
             self
-        '''
+        """
         self._tricked = False
         return self
