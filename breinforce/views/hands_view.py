@@ -14,7 +14,7 @@ class HandsView(BaseView):
         '''Render representation based on the table configuration
         '''
         output = ''
-        state = self.env.state()
+        state = self.env.state
         self.state = state
         hand_name = state['hand_name']
         sb = state['sb']
@@ -27,9 +27,9 @@ class HandsView(BaseView):
         button = state['button']
         player_names = state['player_names']
         start_stacks = state['start_stacks']
-        hole_cards = state['hole_cards']
         pot = state['pot']
         rake = state['rake']
+        hole_cards = state['hole_cards']
         community_cards = state['community_cards']
         flop_cards = repr(community_cards[:3])
         turn_cards = repr(community_cards[:3]) + '[' + repr(community_cards[3]) + ']'
@@ -41,14 +41,21 @@ class HandsView(BaseView):
         output += f'PokerStars Hand #{hand_name}: Hold\'em No Limit' \
             f'(${sb}/${bb}/${st} chips) - {date1} MSK\n'# [{date2} ET]\n'
         # Table
-        output += f'Table \'{table_name}\' {n_players}-max' \
+        output += f'Table \'{table_name}\' {n_players}-max ' \
             f'Seat #{button + 1} is the button\n'
         # Seats
         for i, start_stack in enumerate(start_stacks):
             player_name = player_names[i]
             output += f'Seat {i+1}: {player_name} (${start_stack} in chips)\n'
         # Preflop
-        output += self.__subhistory(self.env.history, 0)
+        #output += self.__subhistory(self.env.history, 0)
+        sb_name = player_names[button + 1]
+        output += f'{sb_name} posts small blind ${sb}\n'
+        bb_name = player_names[button + 2]
+        output += f'{bb_name} posts big blind ${bb}\n'
+        if n_players > 3:
+            st_name = player_names[button + 3]
+            output += f'{st_name} posts straddle ${st}\n'
         # Dealt
         output += '*** HOLE CARDS ***\n'
         for player in range(n_players):

@@ -9,7 +9,6 @@ hands_view = HandsView(env)
 
 actns = [
     "fold",
-    "check",
     "call",
     "raise_half_pot",
     "raise_one_pot",
@@ -17,7 +16,6 @@ actns = [
     "allin"
 ]
 fracs = [
-    -float("inf"),
     0,
     None,
     0.5,
@@ -27,10 +25,9 @@ fracs = [
 ]
 probs = [
     0.1,
-    0.1,
-    0.5,
-    0.1,
-    0.1,
+    0.3,
+    0.2,
+    0.2,
     0.1,
     0.0
 ]
@@ -48,23 +45,26 @@ while True:
     if all(done):
         break
 
-print(hands_view.render())
+#print(hands_view.render())
+
 lines = ""
+lines += "[\n"
 for step, item in enumerate(env.history):
     line = ""
     state, player, action, info = item
-    line += f"street: {str(state['street']+1)}"
-    line += ", "
-    line += f"player: {player}"
-    line += ", "
-    line += f"min_raise: {state['min_raise']}"
-    line += ", "
-    line += f"max_raise: {state['max_raise']}"
-    line += ", "
-    line += f"action: {str(action).rjust(3)}"
-    if state["street"] == 0:
-        line += ", "
-        line += f"ante: {state['antes'][0]}"
-    line += f" -> pot: {state['pot']}"
-    lines += line + "\n"
+    line += "\t{\n"
+    line += f"\t\tstep: {str(step+1)}, \n"
+    line += f"\t\tstreet: {str(state['street']+1)}, \n"
+    line += f"\t\tplayer: {player}, \n"
+    line += f"\t\traise: [{state['min_raise']}, {state['max_raise']}], \n"
+    line += f"\t\tmax_raise: {state['max_raise']}, \n"
+    line += f"\t\taction: {str(action).rjust(3)} \n"
+    line += f"\t\tpot: {state['pot']} \n"
+    line += f"\t\tstacks: {state['stacks']} \n"
+    line += f"\t\tacted: {state['acted']} \n"
+    line += f"\t\tactive: {state['active']} \n"
+    line += "\t}"
+    end = ",\n" if step < len(env.history) - 1 else "\n"
+    lines += line + end
+lines += "]\n"
 print(lines)

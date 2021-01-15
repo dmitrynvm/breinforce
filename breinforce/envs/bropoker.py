@@ -82,7 +82,8 @@ class Bropoker(gym.Env):
         self.antes = np.array(antes)
 
         # auxilary
-        self.big_blind = blinds[0] if n_players > 2 else None
+        self.small_blind = blinds[0]
+        self.big_blind = blinds[1] if n_players > 2 else None
         self.straddle = blinds[2] if n_players > 3 else None
         self.hand_name = "hand_1"
         self.date1 = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
@@ -109,7 +110,7 @@ class Bropoker(gym.Env):
         self.active = np.zeros(self.n_players, dtype=np.uint8)
         self.pot_commit = np.zeros(self.n_players, dtype=np.int32)
         self.stacks = np.array(start_stacks)
-        self.street_option = np.zeros(self.n_players, dtype=np.uint8)
+        self.acted = np.zeros(self.n_players, dtype=np.uint8)
         self.street_commits = np.zeros(self.n_players, dtype=np.int32)
         self.street_raises = 0
         self.history = []
@@ -126,34 +127,26 @@ class Bropoker(gym.Env):
         self.button = 0
         self.deck.shuffle()
         self.community_cards = self.deck.draw(self.n_community_cards[0])
-        self.history = []#{street: [] for street in range(self.n_streets)}
+        self.history = []
         self.hole_cards = [
             self.deck.draw(self.n_hole_cards) for _
             in range(self.n_players)
         ]
-        self.largest_raise = self.big_blind
+        self.largest_raise = self.straddle
         self.pot = 0
         self.pot_commit.fill(0)
         self.street = 0
         self.street_commits.fill(0)
-        self.street_option.fill(0)
+        self.acted.fill(0)
         self.street_raises = 0
 
         self.player = self.button
         # in heads up button posts small blind
-        info = {"street": 0, "action_type": "small_blind"}
-        self.history.append((self.state(), self.button, self.blinds[0], info))
-        if self.n_players > 2:
-            info = {"street": 0, "action_type": "big_blind"}
-            self.history.append((self.state(), self.button + 1, self.blinds[1], info))
-        if self.n_players > 3:
-            info = {"street": 0, "action_type": "straddle"}
-            self.history.append((self.state(), self.button + 2, self.blinds[2], info))
-
         if self.n_players > 2:
             self.__move_action()
-        self.__collect_multiple_actions(actions=self.antes, street_commits=False)
-        self.__collect_multiple_actions(actions=self.blinds, street_commits=True)
+
+        self.__apply_many(actions=self.antes, street_commits=False)
+        self.__apply_many(actions=self.blinds, street_commits=True)
         self.__move_action()
         self.__move_action()
         return self.__observation()
@@ -227,7 +220,7 @@ class Bropoker(gym.Env):
         if action and (action - call) >= self.largest_raise:
             self.largest_raise = action - call
             self.street_raises += 1
-        self.__collect_action(action)
+        self.__apply_one(action)
         action = int(action)
         action_type = None
         if action < 0:
@@ -238,13 +231,8 @@ class Bropoker(gym.Env):
             action_type = "call"
         else:
             action_type = "raise"
-        info = {
-            "street": self.street + 1,
-            "action_type": action_type,
-            "min_raise": min_raise
-        }
-        self.history.append((self.state(), self.player, action, info))
-        self.street_option[self.player] = True
+        self.history.append((self.state, self.player+1, action, None))
+        self.acted[self.player] = True
         self.__move_action()
 
         # if all agreed go to next street
@@ -266,7 +254,7 @@ class Bropoker(gym.Env):
                 if not all_allin:
                     break
             self.street_commits.fill(0)
-            self.street_option = np.logical_not(self.active).astype(np.uint8)
+            self.acted = np.logical_not(self.active).astype(np.uint8)
             self.street_raises = 0
 
         obs, payouts, done, info = self.__output()
@@ -285,7 +273,7 @@ class Bropoker(gym.Env):
 
     def __all_agreed(self) -> bool:
         # not all agreed if not all players had chance to act
-        if not all(self.street_option):
+        if not all(self.acted):
             return False
         # all agreed if street commits equal to maximum street commit
         # or player is all in
@@ -344,7 +332,16 @@ class Bropoker(gym.Env):
         # if fold closest
         return 0
 
-    def __collect_multiple_actions(
+    def __apply_one(self, action: int):
+        # action only as large as stack size
+        action = min(self.stacks[self.player], action)
+
+        self.pot += action
+        self.pot_commit[self.player] += action
+        self.street_commits[self.player] += action
+        self.stacks[self.player] -= action
+
+    def __apply_many(
         self,
         actions: List[int],
         street_commits: bool = True
@@ -356,15 +353,6 @@ class Bropoker(gym.Env):
         self.pot_commit += actions
         self.pot += sum(actions)
         self.stacks -= actions
-
-    def __collect_action(self, action: int):
-        # action only as large as stack size
-        action = min(self.stacks[self.player], action)
-
-        self.pot += action
-        self.pot_commit[self.player] += action
-        self.street_commits[self.player] += action
-        self.stacks[self.player] -= action
 
     def __done(self) -> List[bool]:
         if self.street >= self.n_streets or sum(self.active) <= 1:
@@ -470,7 +458,7 @@ class Bropoker(gym.Env):
             if self.active[player]:
                 break
             else:
-                self.street_option[player] = True
+                self.acted[player] = True
         self.player = player
 
     def __clean(self, raise_size):
@@ -516,14 +504,14 @@ class Bropoker(gym.Env):
             )
         self.agents = dict(zip(agent_keys, agents))
 
+    @property
     def state(self):
-        print(self.start_stacks)
         output = {
             # auxilary
             "table_name": self.table_name,
-            "sb": self.blinds[0],
-            "bb": self.blinds[1],
-            "st": self.blinds[2] if self.n_players > 3 else None,
+            "sb": self.small_blind,
+            "bb": self.big_blind,
+            "st": self.straddle,
             "hand_name": self.hand_name,
             "date1": self.date1,
             "date2": self.date2,
@@ -540,7 +528,6 @@ class Bropoker(gym.Env):
             "pot": self.pot,
             "payouts": self.payouts,
             "street_commits": self.street_commits,
-            "stacks": self.stacks,
             "n_players": self.n_players,
             "n_hole_cards": self.n_hole_cards,
             "n_community_cards": sum(self.n_community_cards),
@@ -548,7 +535,10 @@ class Bropoker(gym.Env):
             "antes": self.antes,
             "street": self.street,
             "min_raise": self.min_raise,
-            "max_raise": self.max_raise
+            "max_raise": self.max_raise,
+            "acted": self.acted.copy(),
+            "active": self.active.copy(),
+            "stacks": self.stacks.copy()
         }
         return output
 
