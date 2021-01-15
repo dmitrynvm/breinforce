@@ -1,4 +1,4 @@
-"""Classes and functions for running poker games"""
+"""Bropoker environment class for running poker games"""
 from datetime import datetime
 import json
 import gym
@@ -12,7 +12,6 @@ from breinforce.config.application import CONFIG_DIR
 from breinforce.games.bropoker import Card, Deck, Judge
 from breinforce.views import AsciiView
 from . import utils
-# from zoneinfo import ZoneInfo , timezone
 
 
 class Bropoker(gym.Env):
@@ -20,58 +19,6 @@ class Bropoker(gym.Env):
     given configuration. Supports limit, no limit and pot limit
     bet sizing, arbitrary deck sizes, arbitrary hole and community
     cards and many other options.
-
-    Parameters
-    ----------
-    n_players : int
-        maximum number of players
-    n_streets : int
-        number of streets including preflop, e.g. for texas hold"em
-        n_streets=4
-    blinds : Union[int, List[int]]
-        blind distribution as a list of ints, one for each player
-        starting from the button e.g. [0, 1, 2] for a three player game
-        with a sb of 1 and bb of 2, passed ints will be expanded to
-        all players i.e. pass blinds=0 for no blinds
-    antes : Union[int, List[int]]
-        ante distribution as a list of ints, one for each player
-        starting from the button e.g. [0, 0, 5] for a three player game
-        with a bb ante of 5, passed ints will be expanded to all
-        players i.e. pass antes=0 for no antes
-    raise_sizes : Union[float, str, List[Union[float, str]]]
-        max raise sizes for each street, valid raise sizes are ints,
-        floats, and "pot", e.g. for a 1-2 limit hold"em the raise sizes
-        should be [2, 2, 4, 4] as the small and big bet are 2 and 4.
-        float("inf") can be used for no limit games. pot limit raise
-        sizes can be set using "pot". if only a single int, float or
-        string is passed the value is expanded to a list the length
-        of number of streets, e.g. for a standard no limit game pass
-        raise_sizes=float("inf")
-    n_raises : Union[float, List[float]]
-        max number of bets for each street including preflop, valid
-        raise numbers are ints and floats. if only a single int or float
-        is passed the value is expanded to a list the length of number
-        of streets, e.g. for a standard limit game pass n_raises=4
-    n_suits : int
-        number of suits to use in deck, must be between 1 and 4
-    n_ranks : int
-        number of ranks to use in deck, must be between 1 and 13
-    n_hole_cards : int
-        number of hole cards per player, must be greater than 0
-    n_community_cards : Union[int, List[int]]
-        number of community cards per street including preflop, e.g.
-        for texas hold"em pass n_community_cards=[0, 3, 1, 1]. if only
-        a single int is passed, it is expanded to a list the length of
-        number of streets
-    n_cards_for_hand : int
-        number of cards for a valid poker hand, e.g. for texas hold"em
-        n_cards_for_hand=5
-    start_stacks : List[int]
-        number of chips each player starts with
-    order : Optional[List[str]], optional
-        optional custom order of hand ranks, must be permutation of
-        ["sf", "fk", "fh", "fl", "st", "tk", "tp", "pa", "hc"]. if
-        order=None, hands are ranked by rarity. by default None
     """
 
     @staticmethod
@@ -98,7 +45,9 @@ class Bropoker(gym.Env):
         for env_id, config in configs.items():
             if env_id not in env_ids:
                 gym.envs.registration.register(
-                    id=env_id, entry_point=env_entry_point, kwargs={**config}
+                    id=env_id,
+                    entry_point=env_entry_point,
+                    kwargs={**config}
                 )
 
     def __init__(
@@ -135,11 +84,11 @@ class Bropoker(gym.Env):
         # auxilary
         self.big_blind = blinds[0] if n_players > 2 else None
         self.straddle = blinds[2] if n_players > 3 else None
-        self.hand_id = "hand_1"
+        self.hand_name = "hand_1"
         self.date1 = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
         self.date2 = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
-        self.table_id = "table_1"
-        self.player_ids = [
+        self.table_name = "table_1"
+        self.player_names = [
             "agent_" + str(i+1) for i in range(self.n_players)
         ]
         self.start_stacks = np.array(start_stacks)
@@ -147,56 +96,33 @@ class Bropoker(gym.Env):
         self.call = None
         self.min_raise = None
         self.max_raise = None
-
-        # dealer
-        self.player = -1
-        self.active = np.zeros(self.n_players, dtype=np.uint8)
-        self.button = 0
+        self.hole_cards = []
         self.community_cards = []
         self.deck = Deck(self.n_suits, self.n_ranks)
-        self.judge = Judge(
-            self.n_suits,
-            self.n_ranks,
-            self.n_cards_for_hand,
-            low_end_straight=False
-        )
+
+        # dealer
+        self.street = 0
+        self.button = 0
+        self.player = -1
         self.pot = 0
-        self.history = []
-        self.hole_cards = []
         self.largest_raise = 0
+        self.active = np.zeros(self.n_players, dtype=np.uint8)
         self.pot_commit = np.zeros(self.n_players, dtype=np.int32)
         self.stacks = np.array(start_stacks)
-        self.street = 0
-        self.street_commits = np.zeros(self.n_players, dtype=np.int32)
         self.street_option = np.zeros(self.n_players, dtype=np.uint8)
+        self.street_commits = np.zeros(self.n_players, dtype=np.int32)
         self.street_raises = 0
+        self.history = []
 
-        self.config = {
-            "n_players": self.n_players,
-            "n_streets": self.n_streets,
-            "blinds": self.blinds,
-            "antes": self.antes,
-            "raise_sizes": self.raise_sizes,
-            "n_raises": self.n_raises,
-            "n_suits": self.n_suits,
-            "n_ranks": self.n_ranks,
-            "n_hole_cards": self.n_hole_cards,
-            "n_community_cards": self.n_community_cards,
-            "n_cards_for_hand": self.n_cards_for_hand,
-            "rake": self.rake,
-            "button": self.button + 1,
-            "stacks": self.start_stacks
-        }
-
+        self.judge = Judge(n_suits, n_ranks, n_cards_for_hand)
         self.agents: Optional[Dict[int, BaseAgent]] = None
-        self.prev_obs: Optional[Dict] = None
 
     def reset(self) -> Dict:
         """Resets the hash table. Shuffles the deck, deals new hole cards
         to all players, moves the button and collects blinds and antes.
         """
         self.active.fill(1)
-        self.stacks = self.start_stacks
+        self.stacks = self.start_stacks.copy()
         self.button = 0
         self.deck.shuffle()
         self.community_cards = self.deck.draw(self.n_community_cards[0])
@@ -233,17 +159,7 @@ class Bropoker(gym.Env):
         return self.__observation()
 
     def act(self, obs: dict) -> int:
-        if self.agents is None:
-            raise exceptions.NoRegisteredAgentsError(
-                "register agents using env.register_agents(...) before"
-                "calling act(obs)"
-            )
-        if self.prev_obs is None:
-            raise exceptions.EnvironmentResetError(
-                "call reset() before calling first step()"
-            )
-        player = self.prev_obs["player"]
-        action = self.agents[player].act(obs)
+        action = self.agents[self.player].act(obs)
         return action
 
     def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
@@ -479,8 +395,6 @@ class Bropoker(gym.Env):
             "stacks": self.stacks,
             "street_commits": self.street_commits,
         }
-        if self.agents is not None:
-            self.prev_obs = obs
         return obs
 
     def __payouts(self) -> np.ndarray:
@@ -602,25 +516,18 @@ class Bropoker(gym.Env):
             )
         self.agents = dict(zip(agent_keys, agents))
 
-    def _uuid(self, size, mode="hex"):
-        string = ""
-        if mode == "int":
-            string = str(uuid.uuid4().int)[:size]
-        elif mode == "hex":
-            string = uuid.uuid4().hex[:size]
-        return string
-
     def state(self):
+        print(self.start_stacks)
         output = {
             # auxilary
-            "table_id": self.table_id,
+            "table_name": self.table_name,
             "sb": self.blinds[0],
             "bb": self.blinds[1],
             "st": self.blinds[2] if self.n_players > 3 else None,
-            "hand_id": self.hand_id,
+            "hand_name": self.hand_name,
             "date1": self.date1,
             "date2": self.date2,
-            "player_ids": self.player_ids,
+            "player_names": self.player_names,
             "hole_cards": self.hole_cards,
             "start_stacks": self.start_stacks,
             # config
@@ -632,7 +539,6 @@ class Bropoker(gym.Env):
             "done": all(self.__done()),
             "pot": self.pot,
             "payouts": self.payouts,
-            "prev_action": None if not self.history else self.history[-1],
             "street_commits": self.street_commits,
             "stacks": self.stacks,
             "n_players": self.n_players,

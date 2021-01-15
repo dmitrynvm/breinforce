@@ -1,5 +1,4 @@
 import os
-import uuid
 from .base_view import BaseView
 
 
@@ -17,17 +16,17 @@ class HandsView(BaseView):
         output = ''
         state = self.env.state()
         self.state = state
-        hand_id = state['hand_id']
+        hand_name = state['hand_name']
         sb = state['sb']
         bb = state['bb']
         st = state['st']
-        table_id = state['table_id']
+        table_name = state['table_name']
         date1 = state['date1']
         date2 = state['date2']
         n_players = state['n_players']
         button = state['button']
-        player_ids = state['player_ids']
-        stacks = state['start_stacks']
+        player_names = state['player_names']
+        start_stacks = state['start_stacks']
         hole_cards = state['hole_cards']
         pot = state['pot']
         rake = state['rake']
@@ -39,23 +38,23 @@ class HandsView(BaseView):
         self.summary = self.__summary()
 
         # Header
-        output += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
+        output += f'PokerStars Hand #{hand_name}: Hold\'em No Limit' \
             f'(${sb}/${bb}/${st} chips) - {date1} MSK\n'# [{date2} ET]\n'
         # Table
-        output += f'Table \'{table_id}\' {n_players}-max' \
+        output += f'Table \'{table_name}\' {n_players}-max' \
             f'Seat #{button + 1} is the button\n'
         # Seats
-        for i, stack in enumerate(stacks):
-            user_id = player_ids[i]
-            output += f'Seat {i+1}: {user_id} (${stack} in chips)\n'
+        for i, start_stack in enumerate(start_stacks):
+            player_name = player_names[i]
+            output += f'Seat {i+1}: {player_name} (${start_stack} in chips)\n'
         # Preflop
         output += self.__subhistory(self.env.history, 0)
         # Dealt
         output += '*** HOLE CARDS ***\n'
         for player in range(n_players):
-            player_id = player_ids[player]
+            player_name = player_names[player]
             player_cards = repr(hole_cards[player])
-            output += f'Dealt to {player_id} {player_cards}\n'
+            output += f'Dealt to {player_name} {player_cards}\n'
         # Preflop
         output += self.__subhistory(self.env.history, 1)
         # Flop
@@ -86,14 +85,6 @@ class HandsView(BaseView):
         '''String representation of the view
         '''
         return self.string
-
-    def _uuid(self, size, mode='hex'):
-        string = ''
-        if mode == 'int':
-            string = str(uuid.uuid4().int)[:size]
-        elif mode == 'hex':
-            string = uuid.uuid4().hex[:size]
-        return string
 
     def __subhistory(self, subhistory, street):
         output = ''
@@ -154,7 +145,7 @@ class HandsView(BaseView):
                 'rank': None,
                 'flop': None
             }
-            item['name'] = self.state['player_ids'][player]
+            item['name'] = self.state['player_names'][player]
             if player == 0:
                 item['role'] = 'button'
             elif player == 1:
