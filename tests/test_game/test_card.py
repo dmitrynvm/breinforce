@@ -1,6 +1,6 @@
 import random
 import pytest
-from breinforce import exceptions
+from breinforce import errors
 from breinforce.games.bropoker import Card, Deck
 
 
@@ -35,19 +35,19 @@ def test_trick():
 
 
 def test_invalid_init():
-    with pytest.raises(exceptions.InvalidRankError):
+    with pytest.raises(errors.InvalidRankError):
         Card("1s")
-    with pytest.raises(exceptions.InvalidRankError):
+    with pytest.raises(errors.InvalidRankError):
         Card("1t")
-    with pytest.raises(exceptions.InvalidRankError):
+    with pytest.raises(errors.InvalidRankError):
         Deck(0, 0)
-    with pytest.raises(exceptions.InvalidRankError):
+    with pytest.raises(errors.InvalidRankError):
         Deck(2, 14)
-    with pytest.raises(exceptions.InvalidSuitError):
+    with pytest.raises(errors.InvalidSuitError):
         Card("At")
-    with pytest.raises(exceptions.InvalidSuitError):
+    with pytest.raises(errors.InvalidSuitError):
         Deck(0, 1)
-    with pytest.raises(exceptions.InvalidSuitError):
+    with pytest.raises(errors.InvalidSuitError):
         Deck(5, 1)
 
 

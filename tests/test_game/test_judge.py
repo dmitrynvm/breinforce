@@ -1,14 +1,14 @@
 import pytest
-from breinforce import exceptions
+from breinforce import errors
 from breinforce.games.bropoker import Card, Deck, HashMap, Judge
 
 
 def test_init():
-    with pytest.raises(exceptions.InvalidHandSizeError):
+    with pytest.raises(errors.InvalidHandSizeError):
         Judge(4, 13, 0)
-    with pytest.raises(exceptions.InvalidHandSizeError):
+    with pytest.raises(errors.InvalidHandSizeError):
         Judge(4, 13, 6)
-    with pytest.raises(exceptions.InvalidOrderError):
+    with pytest.raises(errors.InvalidOrderError):
         HashMap(4, 13, 5, order=["lala"])
 
 
@@ -37,9 +37,9 @@ def test_hand_rank():
     judge = Judge(4, 13, 5)
     assert judge.get_rank_class(0) == "straight flush"
     assert judge.get_rank_class(7462) == "high card"
-    with pytest.raises(exceptions.InvalidHandRankError):
+    with pytest.raises(errors.InvalidHandRankError):
         judge.get_rank_class(-1)
-    with pytest.raises(exceptions.InvalidHandRankError):
+    with pytest.raises(errors.InvalidHandRankError):
         judge.get_rank_class(7463)
 
 

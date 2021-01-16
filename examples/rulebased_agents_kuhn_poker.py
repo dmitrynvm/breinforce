@@ -13,7 +13,7 @@ obs = env.reset()
 
 while True:
     action = env.act(obs)
-    obs, rewards, done, info = env.step(action)
+    obs, rewards, done, _ = env.step(action)
 
     if all(done):
         break

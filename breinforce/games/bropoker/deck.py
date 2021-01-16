@@ -1,7 +1,7 @@
 import random
 from typing import List, Optional, Union
 from .card import Card
-from breinforce import exceptions
+from breinforce import errors
 
 
 class Deck:
@@ -20,12 +20,12 @@ class Deck:
 
     def __init__(self, n_suits: int, n_ranks: int) -> None:
         if n_ranks < 1 or n_ranks > 13:
-            raise exceptions.InvalidRankError(
+            raise errors.InvalidRankError(
                 f"Invalid number of suits, expected number of suits "
                 f"between 1 and 13, got {n_ranks}"
             )
         if n_suits < 1 or n_suits > 4:
-            raise exceptions.InvalidSuitError(
+            raise errors.InvalidSuitError(
                 f"Invalid number of suits, expected number of suits "
                 f"between 1 and 4, got {n_suits}"
             )

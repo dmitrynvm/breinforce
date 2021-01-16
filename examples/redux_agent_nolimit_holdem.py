@@ -1,9 +1,6 @@
 import gym
 import json
-from breinforce import agents, envs, views
-
-envs.Bropoker.register()
-env = gym.make("CustomSixPlayer-v0")
+from breinforce import agents, envs, views, utils
 
 probs = [
     0.1,  # fold
@@ -14,18 +11,25 @@ probs = [
     0.0   # all_in_raise
 ]
 
+
+utils.configure()
+env = gym.make("CustomSixPlayer-v0")
 agents = [agents.RandomAgent(probs)] * 6
-env.register_agents(agents)
+env.register(agents)
 obs = env.reset()
+print(env.render())
 
 
-while True:
-    action = env.act(obs)
-    obs, rewards, done, _ = env.step(action)
-    state = env.json_state
-    print(json.dumps(state, indent=4))
-    if all(done):
-        break
+
+
+
+# while True:
+#     action = env.act(obs)
+#     obs, rewards, done, _ = env.step(action)
+#     state = env.json_state
+#     print(json.dumps(state, indent=4))
+#     if all(done):
+#         break
 
 # lines = ""
 # lines += "[\n"

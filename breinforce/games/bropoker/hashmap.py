@@ -4,7 +4,7 @@ import functools
 import itertools
 import operator
 from typing import Dict, List
-from breinforce import exceptions
+from breinforce import errors
 from . import utils
 from .card import Card
 
@@ -42,7 +42,7 @@ class HashMap:
 
         if order is not None:
             if any(string not in order for string in self.ORDER_STRINGS):
-                raise exceptions.InvalidOrderError(
+                raise errors.InvalidOrderError(
                     (
                         f"invalid order list {order},"
                         f"order list must be permutation \

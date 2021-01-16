@@ -16,7 +16,7 @@ class HandsView(BaseView):
         output = ''
         state = self.env.state
         self.state = state
-        hand_name = state['hand_name']
+        hand_id = state['hand_id']
         sb = state['sb']
         bb = state['bb']
         st = state['st']
@@ -25,7 +25,7 @@ class HandsView(BaseView):
         date2 = state['date2']
         n_players = state['n_players']
         button = state['button']
-        player_names = state['player_names']
+        player_ids = state['player_ids']
         start_stacks = state['start_stacks']
         pot = state['pot']
         rake = state['rake']
@@ -38,30 +38,30 @@ class HandsView(BaseView):
         self.summary = self.__summary()
 
         # Header
-        output += f'PokerStars Hand #{hand_name}: Hold\'em No Limit' \
+        output += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
             f'(${sb}/${bb}/${st} chips) - {date1} MSK\n'# [{date2} ET]\n'
         # Table
         output += f'Table \'{table_name}\' {n_players}-max ' \
             f'Seat #{button + 1} is the button\n'
         # Seats
         for i, start_stack in enumerate(start_stacks):
-            player_name = player_names[i]
-            output += f'Seat {i+1}: {player_name} (${start_stack} in chips)\n'
+            player_id = player_ids[i]
+            output += f'Seat {i+1}: {player_id} (${start_stack} in chips)\n'
         # Preflop
         #output += self.__subhistory(self.env.history, 0)
-        sb_name = player_names[button + 1]
-        output += f'{sb_name} posts small blind ${sb}\n'
-        bb_name = player_names[button + 2]
-        output += f'{bb_name} posts big blind ${bb}\n'
+        sb_id = player_ids[button + 1]
+        output += f'{sb_id} posts small blind ${sb}\n'
+        bb_id = player_ids[button + 2]
+        output += f'{bb_id} posts big blind ${bb}\n'
         if n_players > 3:
-            st_name = player_names[button + 3]
-            output += f'{st_name} posts straddle ${st}\n'
+            st_id = player_ids[button + 3]
+            output += f'{st_id} posts straddle ${st}\n'
         # Dealt
         output += '*** HOLE CARDS ***\n'
         for player in range(n_players):
-            player_name = player_names[player]
+            player_id = player_ids[player]
             player_cards = repr(hole_cards[player])
-            output += f'Dealt to {player_name} {player_cards}\n'
+            output += f'Dealt to {player_id} {player_cards}\n'
         # Preflop
         output += self.__subhistory(self.env.history, 1)
         # Flop
@@ -152,7 +152,7 @@ class HandsView(BaseView):
                 'rank': None,
                 'flop': None
             }
-            item['name'] = self.state['player_names'][player]
+            item['name'] = self.state['player_ids'][player]
             if player == 0:
                 item['role'] = 'button'
             elif player == 1:
