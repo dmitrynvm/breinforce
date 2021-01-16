@@ -97,7 +97,7 @@ class HandsView(BaseView):
         output = ''
         for item in subhistory:
             state, player, action, info = item
-            if info['street'] == street:
+            if state['street'] == street:
                 output += f'Player{player+1} '
                 if info['action_type'] == 'small_blind':
                     output += f'posts small blind ${action}'

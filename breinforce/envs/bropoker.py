@@ -15,11 +15,6 @@ from . import utils
 
 
 class Bropoker(gym.Env):
-    """Runs a range of different of poker games dependent on the
-    given configuration. Supports limit, no limit and pot limit
-    bet sizing, arbitrary deck sizes, arbitrary hole and community
-    cards and many other options.
-    """
 
     @staticmethod
     def configure():
@@ -60,11 +55,11 @@ class Bropoker(gym.Env):
             n_cards_for_hand: int,
             rake: float,
             raise_sizes: List[float],
-            n_raises: List[float],
             n_community_cards: List[int],
             blinds: List[int],
             antes: List[int],
-            start_stacks: List[int]
+            start_stacks: List[int],
+            pot_splits: List[str]
     ) -> None:
 
         # config
@@ -76,10 +71,11 @@ class Bropoker(gym.Env):
         self.n_cards_for_hand = n_cards_for_hand
         self.rake = rake
         self.raise_sizes = [self.__clean(rs) for rs in raise_sizes]
-        self.n_raises = [float(raise_num) for raise_num in n_raises]
         self.n_community_cards = n_community_cards
         self.blinds = np.array(blinds)
         self.antes = np.array(antes)
+        self.start_stacks = np.array(start_stacks)
+        self.pot_splits = pot_splits
 
         # auxilary
         self.small_blind = blinds[0]
@@ -89,17 +85,14 @@ class Bropoker(gym.Env):
         self.date1 = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
         self.date2 = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
         self.table_name = "table_1"
-        self.player_names = [
-            "agent_" + str(i+1) for i in range(self.n_players)
-        ]
-        self.start_stacks = np.array(start_stacks)
+        self.player_names = ["agent_" + str(i+1) for i in range(self.n_players)]
+        self.hole_cards = []
+        self.community_cards = []
+        self.deck = Deck(self.n_suits, self.n_ranks)
         self.payouts = None
         self.call = None
         self.min_raise = None
         self.max_raise = None
-        self.hole_cards = []
-        self.community_cards = []
-        self.deck = Deck(self.n_suits, self.n_ranks)
 
         # dealer
         self.street = 0
@@ -111,8 +104,7 @@ class Bropoker(gym.Env):
         self.pot_commit = np.zeros(self.n_players, dtype=np.int32)
         self.stacks = np.array(start_stacks)
         self.acted = np.zeros(self.n_players, dtype=np.uint8)
-        self.street_commits = np.zeros(self.n_players, dtype=np.int32)
-        self.street_raises = 0
+        self.committed = np.zeros(self.n_players, dtype=np.int32)
         self.history = []
 
         self.judge = Judge(n_suits, n_ranks, n_cards_for_hand)
@@ -136,24 +128,22 @@ class Bropoker(gym.Env):
         self.pot = 0
         self.pot_commit.fill(0)
         self.street = 0
-        self.street_commits.fill(0)
+        self.committed.fill(0)
         self.acted.fill(0)
-        self.street_raises = 0
 
         self.player = self.button
         # in heads up button posts small blind
         if self.n_players > 2:
             self.__move_action()
 
-        self.__apply_many(actions=self.antes, street_commits=False)
-        self.__apply_many(actions=self.blinds, street_commits=True)
+        self.__apply_many(self.antes, False)
+        self.__apply_many(self.blinds, True)
         self.__move_action()
         self.__move_action()
-        return self.__observation()
+        return self.observation
 
     def act(self, obs: dict) -> int:
-        action = self.agents[self.player].act(obs)
-        return action
+        return self.agents[self.player].act(obs)
 
     def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
         """Advances poker game to next player. If the action is 0, it is
@@ -162,66 +152,24 @@ class Bropoker(gym.Env):
         size. When it is the same distance from two valid bet sizes
         the smaller action size is used, e.g. if the min raise is 10 and
         the bet is 5, it is rounded down to 0.
-
-        Parameters
-        ----------
-        action : int
-            number of chips bet by player currently active
-
-        Returns
-        -------
-        Tuple[Dict, np.ndarray, np.ndarray]
-            observation dictionary containing following info
-
-                {
-                    active: position of active player
-                    button: position of button
-                    call: number of chips needed to call
-                    community_cards: shared community cards
-                    hole_cards: hole cards for every player
-                    max_raise: maximum raise size
-                    min_raise: minimum raise size
-                    pot: number of chips in the pot
-                    stacks: stack size for every player
-                    street_commits: number of chips commited by every
-                                    player on this street
-                }
-
-            payouts for every player
-
-            bool array containing value for every player if that player
-            is still involved in round
-        """
-        if self.player == -1:
-            if any(self.active):
-                return self.__output()
-            raise exceptions.HashMapResetError(
-                "call reset() before calling first step()"
-            )
-
-        fold = action < 0
         action = round(action)
+        """
 
         call, min_raise, max_raise = self.__action_sizes()
         self.call = call
         self.min_raise = min_raise
         self.max_raise = max_raise
-        # round action to nearest sizing
         action = self.__clean_action(action, call, min_raise, max_raise)
 
         # only fold if player cannot check
-        if call and ((action < call) or fold):
+        if call and ((action < call) or action < 0):
             self.active[self.player] = 0
             action = 0
-            called = True
         # if action is full raise record as largest raise
-        checked = call == 0 and action == 0
-        raised = call > 0 and action > 0
         if action and (action - call) >= self.largest_raise:
             self.largest_raise = action - call
-            self.street_raises += 1
         self.__apply_one(action)
-        action = int(action)
+
         action_type = None
         if action < 0:
             action_type = "fold"
@@ -231,7 +179,8 @@ class Bropoker(gym.Env):
             action_type = "call"
         else:
             action_type = "raise"
-        self.history.append((self.state, self.player+1, action, None))
+        info = {"action_type": action_type}
+        self.history.append((self.state, self.player+1, action, info))
         self.acted[self.player] = True
         self.__move_action()
 
@@ -253,9 +202,8 @@ class Bropoker(gym.Env):
                 )
                 if not all_allin:
                     break
-            self.street_commits.fill(0)
+            self.committed.fill(0)
             self.acted = np.logical_not(self.active).astype(np.uint8)
-            self.street_raises = 0
 
         obs, payouts, done, info = self.__output()
         self.payouts = payouts
@@ -272,44 +220,24 @@ class Bropoker(gym.Env):
         return obs, payouts, done, None
 
     def __all_agreed(self) -> bool:
-        # not all agreed if not all players had chance to act
         if not all(self.acted):
             return False
-        # all agreed if street commits equal to maximum street commit
-        # or player is all in
-        # or player is not active
         return all(
-            (self.street_commits == self.street_commits.max())
+            (self.committed == self.committed.max())
             | (self.stacks == 0)
             | np.logical_not(self.active)
         )
 
     def __action_sizes(self) -> Tuple[int, int, int]:
-        # call difference actionween commit and maximum commit
-        call = self.street_commits.max() - self.street_commits[self.player]
-        # min raise at least largest previous raise
-        # if limit game min and max raise equal to raise size
-        if isinstance(self.raise_sizes[self.street], int):
-            max_raise = min_raise = self.raise_sizes[self.street] + call
+        if all(self.__done()):
+            call = min_raise = max_raise = 0
         else:
-            min_raise = max(self.straddle, self.largest_raise + call)
-            if self.raise_sizes[self.street] == "pot":
-                max_raise = self.pot + call * 2
-            elif self.raise_sizes[self.street] == float("inf"):
-                max_raise = self.stacks[self.player]
-        # if maximum number of raises in street
-        # was reached cap raise at 0
-        if self.street_raises >= self.n_raises[self.street]:
-            min_raise = max_raise = 0
-        # if last full raise was done by active player
-        # (another player has raised less than minimum raise amount)
-        # cap active players raise size to 0
-        if self.street_raises and call < self.largest_raise:
-            min_raise = max_raise = 0
-        # clip actions to stack size
-        call = min(call, self.stacks[self.player])
-        min_raise = min(min_raise, self.stacks[self.player])
-        max_raise = min(max_raise, self.stacks[self.player])
+            call = self.committed.max() - self.committed[self.player]
+            call = min(call, self.stacks[self.player])
+            min_raise = max(2 * self.straddle, self.largest_raise + call)
+            min_raise = min(min_raise, self.stacks[self.player])
+            max_raise = self.stacks[self.player]
+            max_raise = min(max_raise, self.stacks[self.player])
         return call, min_raise, max_raise
 
     @staticmethod
@@ -333,57 +261,29 @@ class Bropoker(gym.Env):
         return 0
 
     def __apply_one(self, action: int):
-        # action only as large as stack size
         action = min(self.stacks[self.player], action)
-
         self.pot += action
         self.pot_commit[self.player] += action
-        self.street_commits[self.player] += action
+        self.committed[self.player] += action
         self.stacks[self.player] -= action
 
     def __apply_many(
         self,
         actions: List[int],
-        street_commits: bool = True
+        is_committed: bool = True
     ):
         actions = np.roll(actions, self.player)
         actions = (self.stacks > 0) * self.active * actions
-        if street_commits:
-            self.street_commits += actions
+        if is_committed:
+            self.committed += actions
         self.pot_commit += actions
         self.pot += sum(actions)
         self.stacks -= actions
 
     def __done(self) -> List[bool]:
         if self.street >= self.n_streets or sum(self.active) <= 1:
-            # end game
-            out = np.full(self.n_players, 1)
-            return out
+            return np.full(self.n_players, 1)
         return np.logical_not(self.active)
-
-    def __observation(self) -> Dict:
-        if all(self.__done()):
-            call = min_raise = max_raise = 0
-        else:
-            call, min_raise, max_raise = self.__action_sizes()
-        community_cards = [str(card) for card in self.community_cards]
-        hole_cards = [
-            [str(card) for card in cards] for cards in self.hole_cards
-        ]
-        obs: dict = {
-            "player": self.player,
-            "active": self.active,
-            "button": self.button,
-            "call": call,
-            "community_cards": community_cards,
-            "hole_cards": hole_cards,
-            "max_raise": max_raise,
-            "min_raise": min_raise,
-            "pot": self.pot,
-            "stacks": self.stacks,
-            "street_commits": self.street_commits,
-        }
-        return obs
 
     def __payouts(self) -> np.ndarray:
         # players that have folded lose their actions
@@ -399,7 +299,7 @@ class Bropoker(gym.Env):
         return payouts
 
     def __output(self) -> Tuple[Dict, np.ndarray, np.ndarray]:
-        observation = self.__observation()
+        observation = self.observation
         payouts = self.__payouts()
         done = self.__done()
         return observation, payouts, done, None
@@ -505,6 +405,45 @@ class Bropoker(gym.Env):
         self.agents = dict(zip(agent_keys, agents))
 
     @property
+    def legal_actions(self):
+        bets = set()
+        call, min_raise, max_raise = self.__action_sizes()
+        # fold/check
+        bets.add(0)
+        # call
+        bets.add(call)
+        # raises
+        for split in self.pot_splits:
+            bet = round(split * self.pot)
+            if bet < max_raise:
+                bets.add(bet)
+        # all_in
+        bets.add(max_raise)
+        print(list(sorted(bets)))
+        return bets
+
+    @property
+    def observation(self) -> Dict:
+        call, min_raise, max_raise = self.__action_sizes()
+        community_cards = [str(c) for c in self.community_cards]
+        hole_cards = [[str(c) for c in cs] for cs in self.hole_cards]
+        obs: dict = {
+            "button": self.button,
+            "player": self.player,
+            "pot": self.pot,
+            "call": call,
+            "max_raise": max_raise,
+            "min_raise": min_raise,
+            "legal_actions": self.legal_actions,
+            "community_cards": community_cards,
+            "hole_cards": hole_cards,
+            "active": self.active,
+            "stacks": self.stacks,
+            "committed": self.committed
+        }
+        return obs
+
+    @property
     def state(self):
         output = {
             # auxilary
@@ -527,7 +466,6 @@ class Bropoker(gym.Env):
             "done": all(self.__done()),
             "pot": self.pot,
             "payouts": self.payouts,
-            "street_commits": self.street_commits,
             "n_players": self.n_players,
             "n_hole_cards": self.n_hole_cards,
             "n_community_cards": sum(self.n_community_cards),
@@ -538,7 +476,9 @@ class Bropoker(gym.Env):
             "max_raise": self.max_raise,
             "acted": self.acted.copy(),
             "active": self.active.copy(),
-            "stacks": self.stacks.copy()
+            "stacks": self.stacks.copy(),
+            "call": self.call,
+            "committed": self.committed
         }
         return output
 

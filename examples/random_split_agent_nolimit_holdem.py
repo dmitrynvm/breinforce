@@ -13,7 +13,7 @@ actns = [
     "raise_half_pot",
     "raise_one_pot",
     "raise_two_pot",
-    "allin"
+    "all_in"
 ]
 fracs = [
     0,
@@ -56,13 +56,14 @@ for step, item in enumerate(env.history):
     line += f"\t\tstep: {str(step+1)}, \n"
     line += f"\t\tstreet: {str(state['street']+1)}, \n"
     line += f"\t\tplayer: {player}, \n"
+    line += f"\t\tcall: {state['call']}, \n"
     line += f"\t\traise: [{state['min_raise']}, {state['max_raise']}], \n"
-    line += f"\t\tmax_raise: {state['max_raise']}, \n"
     line += f"\t\taction: {str(action).rjust(3)} \n"
     line += f"\t\tpot: {state['pot']} \n"
     line += f"\t\tstacks: {state['stacks']} \n"
     line += f"\t\tacted: {state['acted']} \n"
     line += f"\t\tactive: {state['active']} \n"
+    line += f"\t\tcommitted: {state['committed']} \n"
     line += "\t}"
     end = ",\n" if step < len(env.history) - 1 else "\n"
     lines += line + end

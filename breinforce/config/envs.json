@@ -10,10 +10,11 @@
             "rake": 0.0,
             "n_community_cards": [0],
             "raise_sizes": [1],
-            "n_raises": [1],
             "blinds": [0, 2],
             "antes": [1, 1],
-            "start_stacks": [10, 10]
+            "start_stacks": [10, 10],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "KuhnThreePlayer-v0": {
             "n_players": 3,
@@ -25,10 +26,11 @@
             "rake": 0.0,
             "n_community_cards": [0],
             "raise_sizes": [1],
-            "n_raises": [1],
             "blinds": [0, 0, 0],
             "antes": [1, 1, 1],
-            "start_stacks": [10, 10, 10]
+            "start_stacks": [10, 10, 10],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "LeducTwoPlayer-v0": {
             "n_players": 2,
@@ -40,10 +42,11 @@
             "rake": 0,
             "n_community_cards": [0, 1],
             "raise_sizes": [2, 2],
-            "n_raises": [2, 2],
             "blinds": [0, 0],
             "antes": [1, 1],
-            "start_stacks": [10, 10]
+            "start_stacks": [10, 10],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "LimitHoldemTwoPlayer-v0": {
             "n_players": 2,
@@ -55,10 +58,11 @@
             "rake": 0.0,
             "n_community_cards": [0, 3, 1, 1],
             "raise_sizes": [2, 2, 4, 4],
-            "n_raises": [3, 4, 4, 4],
             "blinds": [1, 2],
             "antes": [0, 0],
-            "start_stacks": [200, 200]
+            "start_stacks": [200, 200],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "LimitHoldemSixPlayer-v0": {
             "n_players": 6,
@@ -70,10 +74,11 @@
             "rake": 0.0,
             "n_community_cards": [0, 3, 1, 1],
             "raise_sizes": [2, 2, 4, 4],
-            "n_raises": [3, 4, 4, 4],
             "blinds": [1, 2, 0, 0, 0, 0],
             "antes": [0, 0, 0, 0, 0, 0],
-            "start_stacks": [200, 200, 200, 200, 200, 200]
+            "start_stacks": [200, 200, 200, 200, 200, 200],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "LimitHoldemNinePlayer-v0": {
             "n_players": 9,
@@ -84,11 +89,12 @@
             "n_cards_for_hand": 5,
             "rake": 0.0,
             "raise_sizes": [2, 2, 4, 4],
-            "n_raises": [3, 4, 4, 4],
             "n_community_cards": [0, 3, 1, 1],
             "blinds": [1, 2, 0, 0, 0, 0, 0, 0, 0],
             "antes": [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            "start_stacks": [200, 200, 200, 200, 200, 200, 200, 200, 200]
+            "start_stacks": [200, 200, 200, 200, 200, 200, 200, 200, 200],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "NolimitHoldemTwoPlayer-v0": {
             "n_players": 2,
@@ -99,11 +105,12 @@
             "n_cards_for_hand": 5,
             "rake": 0.0,
             "raise_sizes": ["inf", "inf", "inf", "inf"],
-            "n_raises": ["inf", "inf", "inf", "inf"],
             "n_community_cards": [0, 3, 1, 1],
             "blinds": [1, 2],
             "antes": [0, 0],
-            "start_stacks": [200, 200]
+            "start_stacks": [200, 200],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "NolimitHoldemSixPlayer-v0": {
             "n_players": 6,
@@ -114,11 +121,12 @@
             "n_cards_for_hand": 5,
             "rake": 0.0,
             "raise_sizes": ["inf", "inf", "inf", "inf"],
-            "n_raises": ["inf", "inf", "inf", "inf"],
             "n_community_cards": [0, 3, 1, 1],
             "blinds": [1, 2, 0, 0, 0, 0],
             "antes": [0, 0, 0, 0, 0, 0],
-            "start_stacks": [200, 200, 200, 200, 200, 200]
+            "start_stacks": [200, 200, 200, 200, 200, 200],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "NolimitHoldemNinePlayer-v0": {
             "n_players": 9,
@@ -129,11 +137,12 @@
             "n_cards_for_hand": 5,
             "rake": 0.0,
             "raise_sizes": ["inf", "inf", "inf", "inf"],
-            "n_raises": ["inf", "inf", "inf", "inf"],
             "n_community_cards": [0, 3, 1, 1],
             "blinds": [1, 2, 0, 0, 0, 0, 0, 0, 0],
             "antes": [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            "start_stacks": [200, 200, 200, 200, 200, 200, 200, 200, 200]
+            "start_stacks": [200, 200, 200, 200, 200, 200, 200, 200, 200],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "CustomTwoPlayer-v0": {
             "n_players": 2,
@@ -144,11 +153,12 @@
             "n_cards_for_hand": 5,
             "rake": 0.0,
             "raise_sizes": ["inf", "inf", "inf", "inf"],
-            "n_raises": ["inf", "inf", "inf", "inf"],
             "n_community_cards": [0, 3, 1, 1],
             "blinds": [1, 2],
             "antes": [0, 0],
-            "start_stacks": [200, 200]
+            "start_stacks": [200, 200],
+            "pot_splits": [0.5, 1, 2]
+
         },
         "CustomSixPlayer-v0": {
             "n_players": 6,
@@ -158,12 +168,12 @@
             "n_hole_cards": 2,
             "n_cards_for_hand": 5,
             "rake": 0.05,
-            "raise_sizes": [200, 200, 200, 200],
-            "n_raises": ["inf", "inf", "inf", "inf"],
+            "raise_sizes": ["inf", "inf", "inf", "inf"],
             "n_community_cards": [0, 3, 1, 1],
             "blinds": [1, 2, 4, 0, 0, 0],
             "antes": [1, 1, 1, 1, 1, 1],
-            "start_stacks": [190, 191, 192, 193, 194, 195]
+            "start_stacks": [190, 191, 192, 193, 194, 195],
+            "pot_splits": [0.5, 1, 2]
         }
     }
 }
