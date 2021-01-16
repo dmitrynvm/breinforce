@@ -7,45 +7,25 @@ env = gym.make("CustomSixPlayer-v0")
 ascii_view = AsciiView(env)
 hands_view = HandsView(env)
 
-actns = [
-    "fold",
-    "call",
-    "raise_half_pot",
-    "raise_one_pot",
-    "raise_two_pot",
-    "all_in"
-]
-fracs = [
-    0,
-    None,
-    0.5,
-    1,
-    2,
-    float("inf")
-]
 probs = [
-    0.1,
-    0.3,
-    0.2,
-    0.2,
-    0.1,
-    0.0
+    0.1, # fold
+    0.3, # call
+    0.2, # half_pot_raise
+    0.2, # one_pot_raise
+    0.1, # two_pot_rais
+    0.0  # all_in_raise
 ]
 
-agents = [agents.RandomSplitAgent(actns, fracs, probs)] * 6
+agents = [agents.RandomAgent(probs)] * 6
 env.register_agents(agents)
 obs = env.reset()
 
 while True:
     action = env.act(obs)
     #print(ascii_view.render())
-    hand = env.step(action)
-
-    obs, rewards, done, info = hand
+    obs, rewards, done, info = env.step(action)
     if all(done):
         break
-
-#print(hands_view.render())
 
 lines = ""
 lines += "[\n"
