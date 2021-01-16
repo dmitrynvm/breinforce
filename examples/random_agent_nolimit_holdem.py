@@ -1,18 +1,15 @@
 import gym
 from breinforce import agents, envs, views
-from breinforce.views import AsciiView, HandsView
 
 envs.Bropoker.configure()
 env = gym.make("CustomSixPlayer-v0")
-ascii_view = AsciiView(env)
-hands_view = HandsView(env)
 
 probs = [
     0.1, # fold
     0.3, # call
     0.2, # half_pot_raise
     0.2, # one_pot_raise
-    0.1, # two_pot_raise
+    0.1, # two_pot_rais
     0.0  # all_in_raise
 ]
 
@@ -22,7 +19,6 @@ obs = env.reset()
 
 while True:
     action = env.act(obs)
-    #print(ascii_view.render())
     obs, rewards, done, info = env.step(action)
     if all(done):
         break

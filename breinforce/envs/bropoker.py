@@ -419,8 +419,7 @@ class Bropoker(gym.Env):
                 bets.add(bet)
         # all_in
         bets.add(max_raise)
-        print(list(sorted(bets)))
-        return bets
+        return list(sorted(bets))
 
     @property
     def observation(self) -> Dict:
