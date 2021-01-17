@@ -13,24 +13,45 @@ from breinforce import errors
 from breinforce.agents import BaseAgent
 from breinforce.games.bropoker import Card, Deck, Judge
 
-    # @property
-    # def legal_actions(self):
-    #     bets = set()
-    #     # fold/check
-    #     bets.add(0)
-    #     # call
-    #     bets.add(self.call)
-    #     # raises
-    #     for split in self.pot_splits:
-    #         bet = round(split * self.pot)
-    #         if bet < self.max_raise:
-    #             bets.add(bet)
-    #     # all_in
-    #     bets.add(self.max_raise)
-    #     return list(sorted(bets))
+# def __all_agreed(self) -> bool:
+#     if not all(self.acted):
+#         return False
+#     return all(
+#         (self.committed == self.committed.max())
+#         | (self.stacks == 0)
+#         | np.logical_not(self.active)
+#     )
+
+# @property
+# def observation(self) -> Dict:
+#     board_cards = [str(c) for c in self.board_cards]
+#     hole_cards = [[str(c) for c in cs] for cs in self.hole_cards]
+#     obs: dict = {
+#         "button": self.button,
+#         "player": self.player,
+#         "pot": self.pot,
+#         "call": self.call,
+#         "max_raise": self.max_raise,
+#         "min_raise": self.min_raise,
+#         "legal_actions": self.legal_actions,
+#         "board_cards": board_cards,
+#         "hole_cards": hole_cards,
+#         "active": self.active,
+#         "stacks": self.stacks,
+#         "committed": self.committed
+#     }
+#     return obs
 
 
 # getters
+
+def clean(state: dict, action: int) -> int:
+    """
+    Find closest bet size to actual bet
+    """
+    legal_actions = get_legal_actions(state)
+    index = np.argmin(np.absolute(np.array(legal_actions) - action))
+    return legal_actions[index]
 
 def get_small_blind(state):
     return state["blinds"][0]
@@ -78,21 +99,34 @@ def get_max_raise(state):
     player = state["players"][state["player"]]
     done = get_done(state)
     call = get_call(state)
+
     straddle = get_straddle(state)
     max_commit = sum([player["commit"] for player in state["players"]])
     if not all(done):
         out = max(2 * straddle, player["stack"])
     return out
 
-# @property
-# def max_raise(self) -> int:
-#     output = None
-#     if all(self.__done()):
-#         output = 0
-#     else:
-#         output = self.stacks[self.player]
-#         output = min(output, self.stacks[self.player])
-#     return int(output)
+def get_legal_actions(state):
+    call = get_call(state)
+    max_raise = get_max_raise(state)
+    legal_actions = {0, call, max_raise}
+    player = get_player(state)
+    for split in state["splits"]:
+        legal_action = round(split * state["pot"])
+        if legal_action < max_raise:
+            legal_actions.add(legal_action)
+    return list(sorted(legal_actions))
+
+def observe(state):
+    out = {}
+    player = get_player(state)
+    out["legal_actions"] = get_legal_actions(state)
+    return out
+
+def make_fold(state):
+    player = get_player(state)
+    player['alive'] = False
+    return list(sorted(legal_actions))
 
 
 # objects
@@ -118,22 +152,20 @@ def collect_antes():
 def collect_blinds():
     return {"type": "COLLECT_BLINDS"}
 
-def move_turn():
-    return {"type": "MOVE_TURN"}
+def move():
+    return {"type": "MOVE"}
 
-def update_legal_actions(state, call, min_raise, max_raise):
+def perform(amount):
     return {
-        "type": "UPDATE_LEGAL_ACTIONS",
-        "call": call,
-        "min_raise": min_raise,
-        "max_raise": max_raise
+        "type": "PERFORM",
+        "amount": amount
     }
 
 # reducers
 def engine(state, action):
-    global deck, judge
     state = deepcopy(state)
     if action["type"] == "@@redux/INIT":
+        global deck, judge
         deck = Deck(state["n_suits"], state["n_ranks"])
         judge = Judge(
             state["n_suits"],
@@ -166,7 +198,7 @@ def engine(state, action):
                 player["contrib"] += blind
                 player["commit"] += blind
                 player["stack"] -= blind
-    elif action["type"] == "MOVE_TURN":
+    elif action["type"] == "MOVE":
         for i in range(state["n_players"]):
             seat = (state["player"] + i + 1) % state['n_players']
             player = state["players"][seat]
@@ -176,12 +208,19 @@ def engine(state, action):
                 player["acted"] = True
         state["player"] = seat
     elif action["type"] == "UPDATE_LEGAL_ACTIONS":
-        legal_actions = {0, action["call"], action["max_raise"]}
-        for split in state["splits"]:
-            legal_action = round(split * state["pot"])
-            if legal_action < action["max_raise"]:
-                legal_actions.add(legal_action)
-        print(list(sorted(legal_actions)))
+        state["legal_actions"] = get_legal_actions(state)
+    elif action["type"] == "PERFORM":
+        player = get_player(state)
+        amount = action['amount']
+        call = get_call(state)
+        if amount > call:
+            state["pot"] += amount
+            player["contrib"] += amount
+            player["commit"] += amount
+            player["stack"] -= amount
+            player["acted"] = True
+        else:
+            player['alive'] = False
     else:
         print("Unknown action", action)
     return state
@@ -206,7 +245,6 @@ def create_init_state(config):
                 "commit": 0,
                 "contrib": 0,
                 "stack": 0,
-                "legal_actions": [],
                 "hole_cards": [],
             },
             {
@@ -216,7 +254,6 @@ def create_init_state(config):
                 "commit": 0,
                 "contrib": 0,
                 "stack": 0,
-                "legal_actions": [],
                 "hole_cards": [],
             },
             {
@@ -226,7 +263,6 @@ def create_init_state(config):
                 "commit": 0,
                 "contrib": 0,
                 "stack": 0,
-                "legal_actions": [],
                 "hole_cards": [],
             },
             {
@@ -236,7 +272,6 @@ def create_init_state(config):
                 "commit": 0,
                 "contrib": 0,
                 "stack": 0,
-                "legal_actions": [],
                 "hole_cards": [],
             },
             {
@@ -246,7 +281,6 @@ def create_init_state(config):
                 "commit": 0,
                 "contrib": 0,
                 "stack": 0,
-                "legal_actions": [],
                 "hole_cards": [],
             },
             {
@@ -256,7 +290,6 @@ def create_init_state(config):
                 "commit": 0,
                 "contrib": 0,
                 "stack": 0,
-                "legal_actions": [],
                 "hole_cards": [],
             },
         ]
@@ -294,13 +327,14 @@ class Bropoker(gym.Env):
         self.dispatch(collect_antes())
         self.dispatch(collect_blinds())
         if self.state["n_players"] > 2:
-            self.dispatch(move_turn())
-        self.dispatch(move_turn())
-        self.dispatch(move_turn())
-        return {}
+            self.dispatch(move())
+        self.dispatch(move())
+        self.dispatch(move())
+        return observe(self.state)
 
     def act(self, obs: dict) -> int:
-        return self.agents[self.player].act(obs)
+        player = self.state['player']
+        return self.agents[player].act(obs)
 
     @property
     def dispatch(self):
@@ -316,7 +350,7 @@ class Bropoker(gym.Env):
             out = pprint.pformat(self.store.get_state(), sort_dicts=False)
         return out
 
-    def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
+    def step(self, amount: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
         """Advances poker game to next player. If the action is 0, it is
         either considered a check or fold, depending on the previous
         action. The given bet is always rounded to the closest valid bet
@@ -325,24 +359,11 @@ class Bropoker(gym.Env):
         the bet is 5, it is rounded down to 0.
         action = round(action)
         """
-
-        call = get_call(self.state)
-        min_raise = get_min_raise(self.state)
-        max_raise = get_max_raise(self.state)
-        self.dispatch(update_legal_actions(self.state, call, min_raise, max_raise))
-
-    #     # only fold if player cannot check
-    #     if call and ((action < call) or action < 0):
-    #         self.active[self.player] = 0
-    #         action = 0
-    #     # if action is full raise record as largest raise
-    #     if action and (action - call) >= self.largest_raise:
-    #         self.largest_raise = action - call
-    #     self.__apply_one(action)
-
-    #     self.history.append((self.state, self.player+1, action))
-    #     self.acted[self.player] = True
-    #     self.__move_action()
+        amount = clean(self.state, amount)
+        self.dispatch(perform(amount))
+        self.history.append(self.state)
+        self.dispatch(move())
+        return (1, 2, [3], 4)
 
     #     # if all agreed go to next street
     #     if self.__all_agreed():
@@ -378,36 +399,6 @@ class Bropoker(gym.Env):
     #         """
     #     obs["hole_cards"] = obs["hole_cards"][obs["player"]]
     #     return obs, payouts, done, None
-
-    # def __all_agreed(self) -> bool:
-    #     if not all(self.acted):
-    #         return False
-    #     return all(
-    #         (self.committed == self.committed.max())
-    #         | (self.stacks == 0)
-    #         | np.logical_not(self.active)
-    #     )
-
-    # def __apply_one(self, action: int):
-    #     action = min(self.stacks[self.player], action)
-    #     self.pot += action
-    #     self.pot_commit[self.player] += action
-    #     self.committed[self.player] += action
-    #     self.stacks[self.player] -= action
-
-    # def __apply_many(
-    #     self,
-    #     actions: List[int],
-    #     is_committed: bool = True
-    # ):
-    #     actions = np.roll(actions, self.player)
-    #     actions = (self.stacks > 0) * self.active * actions
-    #     if is_committed:
-    #         self.committed += actions
-    #     self.pot_commit += actions
-    #     self.pot += sum(actions)
-    #     self.stacks -= actions
-
 
     # def __payouts(self) -> np.ndarray:
     #     # players that have folded lose their actions
@@ -476,94 +467,6 @@ class Bropoker(gym.Env):
     #         payouts[worst_pos] += remainder
     #     return payouts
 
-    # @property
-    # def observation(self) -> Dict:
-    #     board_cards = [str(c) for c in self.board_cards]
-    #     hole_cards = [[str(c) for c in cs] for cs in self.hole_cards]
-    #     obs: dict = {
-    #         "button": self.button,
-    #         "player": self.player,
-    #         "pot": self.pot,
-    #         "call": self.call,
-    #         "max_raise": self.max_raise,
-    #         "min_raise": self.min_raise,
-    #         "legal_actions": self.legal_actions,
-    #         "board_cards": board_cards,
-    #         "hole_cards": hole_cards,
-    #         "active": self.active,
-    #         "stacks": self.stacks,
-    #         "committed": self.committed
-    #     }
-    #     return obs
 
-    # @property
-    # def state(self):
-    #     output = {
-    #         # auxilary
-    #         "table_name": self.table_name,
-    #         "sb": self.small_blind,
-    #         "bb": self.big_blind,
-    #         "st": self.straddle,
-    #         "hand_id": self.hand_id,
-    #         "date1": self.date1,
-    #         "date2": self.date2,
-    #         "player_ids": self.player_ids,
-    #         "hole_cards": self.hole_cards,
-    #         "start_stacks": self.start_stacks,
-    #         # config
-    #         "player": self.player,
-    #         "allin": self.active * (self.stacks == 0),
-    #         "board_cards": self.board_cards,
-    #         "button": self.button,
-    #         "done": all(self.__done()),
-    #         "pot": self.pot,
-    #         "payouts": self.payouts,
-    #         "n_players": self.n_players,
-    #         "n_hole_cards": self.n_hole_cards,
-    #         "n_board_cards": sum(self.n_board_cards),
-    #         "rake": self.rake,
-    #         "antes": self.antes,
-    #         "street": self.street,
-    #         "min_raise": self.min_raise,
-    #         "max_raise": self.max_raise,
-    #         "acted": self.acted.copy(),
-    #         "active": self.active.copy(),
-    #         "stacks": self.stacks.copy(),
-    #         "call": self.call,
-    #         "committed": self.committed
-    #     }
-    #     return output
 
-    # @property
-    # def json_state(self):
-    #     player = self.player
-    #     player_id = self.player_ids[player]
-    #     board_cards = str([repr(c) for c in self.board_cards])
-    #     hole_cards = str([repr(c) for c in self.hole_cards[player]])
-    #     legal_actions = str([int(a) for a in self.legal_actions])
-
-    #     out = {
-    #         "hand": self.hand_id,
-    #         "street": self.street + 1,
-    #         "button": self.button + 1,
-    #         "player": player + 1,
-    #         "player_id": player_id,
-    #         "pot": int(self.pot),
-    #         "call": self.call,
-    #         "min_raise": self.min_raise,
-    #         "max_raise": self.max_raise,
-    #         "active": bool(self.active[self.player]),
-    #         "board_cards": board_cards,
-    #         "hole_cards": hole_cards,
-    #         "legal_actions": legal_actions
-    #     }
-
-    #     return out
-
-    # @property
-    # def json_history(self):
-    #     return {
-    #         "0": {
-    #         }
-    #     }
 

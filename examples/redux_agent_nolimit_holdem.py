@@ -17,19 +17,14 @@ env = gym.make("CustomSixPlayer-v0")
 agents = [agents.RandomAgent(probs)] * 6
 env.register(agents)
 obs = env.reset()
-env.step(100)
+
+while True:
+    action = env.act(obs)
+    obs, rewards, done, _ = env.step(action)
+    print(action, obs, rewards, done)
+    if all(done):
+        break
 print(env.render())
-
-
-
-
-# while True:
-#     action = env.act(obs)
-#     obs, rewards, done, _ = env.step(action)
-#     state = env.json_state
-#     print(json.dumps(state, indent=4))
-#     if all(done):
-#         break
 
 # lines = ""
 # lines += "[\n"
