@@ -40,7 +40,7 @@ class AsciiView(BaseView):
         state = self.env.state()
         self.n_players = state["n_players"]
         self.n_hole_cards = state["n_hole_cards"]
-        self.n_community_cards = state["n_community_cards"]
+        self.n_board_cards = state["n_board_cards"]
         self.player_pos = self.POS_DICT[self.n_players]
         player = state["player"]
         button = state["button"]
@@ -52,9 +52,9 @@ class AsciiView(BaseView):
 
         str_state = {key: "" for key in self.KEYS}
 
-        # community cards
-        ccs = [str(card) for card in state["community_cards"]]
-        ccs += ["--"] * (self.n_community_cards - len(ccs))
+        # board cards
+        ccs = [str(card) for card in state["board_cards"]]
+        ccs += ["--"] * (self.n_board_cards - len(ccs))
         ccs_string = "[" + ",".join(ccs) + "]"
         str_state["ccs"] = ccs_string
 

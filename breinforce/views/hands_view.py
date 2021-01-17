@@ -30,10 +30,10 @@ class HandsView(BaseView):
         pot = state['pot']
         rake = state['rake']
         hole_cards = state['hole_cards']
-        community_cards = state['community_cards']
-        flop_cards = repr(community_cards[:3])
-        turn_cards = repr(community_cards[:3]) + '[' + repr(community_cards[3]) + ']'
-        river_cards = repr(community_cards[:4]) + '[' + repr(community_cards[4]) + ']'
+        board_cards = state['board_cards']
+        flop_cards = repr(board_cards[:3])
+        turn_cards = repr(board_cards[:3]) + '[' + repr(board_cards[3]) + ']'
+        river_cards = repr(board_cards[:4]) + '[' + repr(board_cards[4]) + ']'
         self.payouts = state['payouts']
         self.summary = self.__summary()
 
@@ -82,7 +82,7 @@ class HandsView(BaseView):
         # Summary
         output += f'*** SUMMARY ***\n'
         output += f'Total pot {pot} | rake {pot * rake} -> {int(pot * rake)}\n'
-        output += f'Board {community_cards}\n'
+        output += f'Board {board_cards}\n'
         output += self.__summary()
 
         self.string = output
@@ -141,7 +141,7 @@ class HandsView(BaseView):
         n_players = self.state['n_players']
         payouts = self.payouts
         hole_cards = self.state['hole_cards']
-        comm_cards = self.state['community_cards']
+        comm_cards = self.state['board_cards']
         rake = self.state['rake']
         for player in range(n_players):
             item = {

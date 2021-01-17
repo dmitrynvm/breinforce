@@ -44,12 +44,12 @@ def test_hand_rank():
 
 
 def test_1_card():
-    # no community cards
+    # no board cards
     judge = Judge(1, 3, 1)
     hand1 = [Card("As")]
     hand2 = [Card("Ks")]
     assert judge.evaluate(hand1, []) < judge.evaluate(hand2, [])
-    # 1 community card
+    # 1 board card
     hand1 = [Card("As")]
     hand2 = [Card("Ks")]
     comm_cards = [Card("Qs")]
@@ -62,7 +62,7 @@ def test_1_card():
         hand2, comm_cards
     )
     # 2 suits
-    # 1 card for hand, no community cards
+    # 1 card for hand, no board cards
     judge = Judge(2, 3, 1)
     hand1 = [Card("Ah")]
     hand2 = [Card("As")]

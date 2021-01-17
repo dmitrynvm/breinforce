@@ -8,7 +8,7 @@ from .hashmap import HashMap
 
 
 class Judge(object):
-    """Evalutes poker hands using hole and community cards
+    """Evalutes poker hands using hole and board cards
 
     Parameters
     ----------
@@ -74,10 +74,10 @@ class Judge(object):
         return f"Judge ({id(self)}): {str(self)}"
 
     def evaluate(
-        self, hole_cards: List[Card], community_cards: List[Card]
+        self, hole_cards: List[Card], board_cards: List[Card]
     ) -> int:
         """Evaluates the hand rank of a poker hand from a list of hole
-        and a list of community cards. Empty hole and community cards
+        and a list of board cards. Empty hole and board cards
         are supported as well as requiring a minimum number of hole
         cards to be used.
 
@@ -85,8 +85,8 @@ class Judge(object):
         ----------
         hole_cards : List[Card]
             list of hole cards
-        community_cards : List[Card]
-            list of community cards
+        board_cards : List[Card]
+            list of board cards
 
         Returns
         -------
@@ -95,7 +95,7 @@ class Judge(object):
         """
         all_card_combs = list(
             itertools.combinations(
-                hole_cards + community_cards, self.cards_for_hand
+                hole_cards + board_cards, self.cards_for_hand
             )
         )
 

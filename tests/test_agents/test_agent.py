@@ -9,7 +9,7 @@ def test_agent():
         "active": [True, True],
         "button": 1,
         "call": 0,
-        "community_cards": [],
+        "board_cards": [],
         "hole_cards": ["Q♠"],
         "max_raise": 1,
         "min_raise": 1,

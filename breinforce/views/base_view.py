@@ -8,8 +8,8 @@ class BaseView:
         number of player
     n_hole_cards : int
         number of hole cards
-    n_community_cards : int
-        number of community cards
+    n_board_cards : int
+        number of board cards
     """
 
     def __init__(self) -> None:
@@ -26,7 +26,7 @@ class BaseView:
                     "player": int - position of active player,
                     "active": List[bool] - list of active players,
                     "allin": List[bool] - list of all in players,
-                    "community_cards": List[Card] - list of community
+                    "board_cards": List[Card] - list of board
                                        cards,
                     "dealer": int - position of dealer,
                     "done": bool - list of done players,

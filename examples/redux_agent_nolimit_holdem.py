@@ -17,8 +17,8 @@ env = gym.make("CustomSixPlayer-v0")
 agents = [agents.RandomAgent(probs)] * 6
 env.register(agents)
 obs = env.reset()
+env.step(100)
 print(env.render())
-
 
 
 
