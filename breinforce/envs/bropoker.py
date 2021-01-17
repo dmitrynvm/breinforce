@@ -13,37 +13,21 @@ from breinforce import errors
 from breinforce.agents import BaseAgent
 from breinforce.games.bropoker import Card, Deck, Judge
 
-# def __all_agreed(self) -> bool:
-#     if not all(self.acted):
-#         return False
-#     return all(
-#         (self.committed == self.committed.max())
-#         | (self.stacks == 0)
-#         | np.logical_not(self.active)
-#     )
-
-# @property
-# def observation(self) -> Dict:
-#     board_cards = [str(c) for c in self.board_cards]
-#     hole_cards = [[str(c) for c in cs] for cs in self.hole_cards]
-#     obs: dict = {
-#         "button": self.button,
-#         "player": self.player,
-#         "pot": self.pot,
-#         "call": self.call,
-#         "max_raise": self.max_raise,
-#         "min_raise": self.min_raise,
-#         "legal_actions": self.legal_actions,
-#         "board_cards": board_cards,
-#         "hole_cards": hole_cards,
-#         "active": self.active,
-#         "stacks": self.stacks,
-#         "committed": self.committed
-#     }
-#     return obs
-
-
 # getters
+def get_max_commit(state: dict) -> int:
+    return max([player["commit"] for player in state["players"]])
+
+def agree(state:dict) -> List[bool]:
+    out = []
+    max_commit = get_max_commit(state)
+    for player in state["players"]:
+        out.append(player["acted"] and (
+            player["commit"] == max_commit
+            or not player["stack"] 
+            or not player["folded"]
+        ))
+    print(all(out))
+    return out
 
 def clean(state: dict, action: int) -> int:
     """
@@ -66,7 +50,7 @@ def get_done(state):
     out = None
     if state["street"] >= state["n_streets"]:
         out = [True] * state["n_players"]
-    out = [not player["alive"] for player in state["players"]]
+    out = [player["folded"] for player in state["players"]]
     return out
 
 def get_player(state):
@@ -117,15 +101,38 @@ def get_legal_actions(state):
             legal_actions.add(legal_action)
     return list(sorted(legal_actions))
 
+# @property
+# def observation(self) -> Dict:
+#     obs: dict = {
+#         "commits": self.committed
+#     }
+#     return obs
+
+def get_players_prop(state, name):
+    return [player[name] for player in state["players"]]
+
 def observe(state):
-    out = {}
     player = get_player(state)
-    out["legal_actions"] = get_legal_actions(state)
+    out = {
+        "player": state["player"],
+        "button": state["button"],
+        "pot": state["pot"],
+        "call": get_call(state),
+        "min_raise": get_min_raise(state),
+        "max_raise": get_max_raise(state),
+        "board_cards": state["board_cards"],
+        "hole_cards": player["hole_cards"],
+        "legal_actions": get_legal_actions(state),
+        "acteds": get_players_prop(state, "acted"),
+        "stacks": get_players_prop(state, "stack"),
+        "commits": get_players_prop(state, "commit"),
+        "foldeds": get_players_prop(state, "folded"),
+    }
     return out
 
 def make_fold(state):
     player = get_player(state)
-    player['alive'] = False
+    player['folded'] = True
     return list(sorted(legal_actions))
 
 
@@ -202,7 +209,7 @@ def engine(state, action):
         for i in range(state["n_players"]):
             seat = (state["player"] + i + 1) % state['n_players']
             player = state["players"][seat]
-            if player["alive"]:
+            if not player["folded"]:
                 break
             else:
                 player["acted"] = True
@@ -220,7 +227,7 @@ def engine(state, action):
             player["stack"] -= amount
             player["acted"] = True
         else:
-            player['alive'] = False
+            player['folded'] = True
     else:
         print("Unknown action", action)
     return state
@@ -240,7 +247,7 @@ def create_init_state(config):
         "players": [
             {
                 "id": "agent_1",
-                "alive": True,
+                "folded": False,
                 "acted": False,
                 "commit": 0,
                 "contrib": 0,
@@ -249,7 +256,7 @@ def create_init_state(config):
             },
             {
                 "id": "agent_2",
-                "alive": True,
+                "folded": False,
                 "acted": False,
                 "commit": 0,
                 "contrib": 0,
@@ -258,7 +265,7 @@ def create_init_state(config):
             },
             {
                 "id": "agent_3",
-                "alive": True,
+                "folded": False,
                 "acted": False,
                 "commit": 0,
                 "contrib": 0,
@@ -267,7 +274,7 @@ def create_init_state(config):
             },
             {
                 "id": "agent_4",
-                "alive": True,
+                "folded": False,
                 "acted": False,
                 "commit": 0,
                 "contrib": 0,
@@ -276,7 +283,7 @@ def create_init_state(config):
             },
             {
                 "id": "agent_5",
-                "alive": True,
+                "folded": False,
                 "acted": False,
                 "commit": 0,
                 "contrib": 0,
@@ -285,7 +292,7 @@ def create_init_state(config):
             },
             {
                 "id": "agent_6",
-                "alive": True,
+                "folded": False,
                 "acted": False,
                 "commit": 0,
                 "contrib": 0,
@@ -363,6 +370,7 @@ class Bropoker(gym.Env):
         self.dispatch(perform(amount))
         self.history.append(self.state)
         self.dispatch(move())
+        agree(self.state)
         return (1, 2, [3], 4)
 
     #     # if all agreed go to next street

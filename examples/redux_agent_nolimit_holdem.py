@@ -17,6 +17,7 @@ env = gym.make("CustomSixPlayer-v0")
 agents = [agents.RandomAgent(probs)] * 6
 env.register(agents)
 obs = env.reset()
+print(obs)
 
 while True:
     action = env.act(obs)
@@ -24,7 +25,7 @@ while True:
     print(action, obs, rewards, done)
     if all(done):
         break
-print(env.render())
+#print(env.render())
 
 # lines = ""
 # lines += "[\n"
