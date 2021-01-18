@@ -1,8 +1,8 @@
 import gym
 import json
-from breinforce import agents, envs, views
+from breinforce import agents, envs, views, utils
 
-envs.Bropoker.register()
+utils.configure()
 env = gym.make("CustomSixPlayer-v0")
 
 probs = [
@@ -15,7 +15,7 @@ probs = [
 ]
 
 agents = [agents.RandomAgent(probs)] * 6
-env.register_agents(agents)
+env.register(agents)
 obs = env.reset()
 
 

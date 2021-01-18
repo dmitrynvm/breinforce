@@ -34,5 +34,5 @@ def configure():
                         gym.envs.registration.register(
                             id=env_id,
                             entry_point=env_entry_point,
-                            kwargs={'config': env_config}
+                            kwargs=env_config
                         )

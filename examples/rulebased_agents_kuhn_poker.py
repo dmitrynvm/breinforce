@@ -7,7 +7,7 @@ from breinforce.agents import KuhnAgent
 
 env = gym.make("KuhnTwoPlayer-v0")
 
-env.register_agents([KuhnAgent(0.3)] * 2)
+env.register([KuhnAgent(0.3)] * 2)
 
 obs = env.reset()
 

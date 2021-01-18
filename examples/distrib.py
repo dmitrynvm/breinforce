@@ -3,13 +3,13 @@ import gym
 import ray
 from ray import tune
 
-import breinforce
-from breinforce import agents, envs, utils
 
-utils.configure()
+from breinforce import agents, envs
+
+envs.Bropoker.configure()
 env = gym.make("CartPole-v0")
 # agents = [agents.RandomBaseAgent()] * 6
-# env.register_agents(agents)
+# env.register(agents)
 # obs = env.reset()
 
 # i = 0

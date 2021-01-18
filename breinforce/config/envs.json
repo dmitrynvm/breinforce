@@ -61,7 +61,7 @@
             "blinds": [1, 2],
             "antes": [0, 0],
             "stacks": [200, 200],
-            "pot_splits": [0.5, 1, 2]
+            "splits": [0.5, 1, 2]
 
         },
         "LimitHoldemSixPlayer-v0": {
@@ -109,7 +109,7 @@
             "blinds": [1, 2],
             "antes": [0, 0],
             "stacks": [200, 200],
-            "pot_splits": [0.5, 1, 2]
+            "splits": [0.5, 1, 2]
 
         },
         "NolimitHoldemSixPlayer-v0": {
@@ -125,7 +125,7 @@
             "blinds": [1, 2, 0, 0, 0, 0],
             "antes": [0, 0, 0, 0, 0, 0],
             "stacks": [200, 200, 200, 200, 200, 200],
-            "pot_splits": [0.5, 1, 2]
+            "splits": [0.5, 1, 2]
 
         },
         "NolimitHoldemNinePlayer-v0": {
@@ -157,7 +157,7 @@
             "blinds": [1, 2],
             "antes": [0, 0],
             "stacks": [200, 200],
-            "pot_splits": [0.5, 1, 2]
+            "splits": [0.5, 1, 2]
 
         },
         "CustomSixPlayer-v0": {

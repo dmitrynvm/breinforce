@@ -21,8 +21,7 @@ class HandsView(BaseView):
         bb = state['bb']
         st = state['st']
         table_name = state['table_name']
-        date1 = state['date1']
-        date2 = state['date2']
+        date = state['date']
         n_players = state['n_players']
         button = state['button']
         player_ids = state['player_ids']
@@ -39,7 +38,7 @@ class HandsView(BaseView):
 
         # Header
         output += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
-            f'(${sb}/${bb}/${st} chips) - {date1} MSK\n'# [{date2} ET]\n'
+            f'(${sb}/${bb}/${st} chips) - {date} MSK\n'# [{date2} ET]\n'
         # Table
         output += f'Table \'{table_name}\' {n_players}-max ' \
             f'Seat #{button + 1} is the button\n'
