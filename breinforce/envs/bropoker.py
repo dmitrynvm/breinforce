@@ -101,7 +101,6 @@ def get_payouts(state) -> np.ndarray:
         payouts += state.alive * (state.pot - state.contribs)
     # if last street played and still multiple players alive
     elif state.street >= state.n_streets:
-        print('HEEEE')
         payouts = evaluate(state)
         payouts -= state.contribs
     if any(payouts > 0):
@@ -273,6 +272,7 @@ class Bropoker(gym.Env):
         self.stacks = np.array(stacks, dtype=np.int16)
         self.acted = np.zeros(self.n_players, dtype=np.uint8)
         self.commits = np.zeros(self.n_players, dtype=np.int32)
+        self.folded = [-1 for i in range(self.n_players)]
         self.history = []
 
         self.deck = Deck(self.n_suits, self.n_ranks)
@@ -330,8 +330,9 @@ class Bropoker(gym.Env):
         }
 
         if call and ((action < call) or action < 0):
-            self.alive[self.player] = 0
             action = 0
+            self.alive[self.player] = 0
+            self.folded[self.player] = self.street
 
         perform_action_(self, action)
         self.history.append((self.state, self.player, action, info))
@@ -398,6 +399,8 @@ class Bropoker(gym.Env):
             "acted": self.acted.copy(),
             "alive": self.alive.copy(),
             "stacks": self.stacks.copy(),
-            "commits": self.commits
+            "commits": self.commits.copy(),
+            "alives": self.alive.copy(),
+            "folded": self.folded.copy()
         }
         return out

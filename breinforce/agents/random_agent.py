@@ -10,11 +10,12 @@ class RandomAgent(BaseAgent):
         self.probs = probs
 
     def act(self, obs):
-        # print('street', obs['street'])
-        # print(obs['legal_actions'])
+
         legal_actions = obs['legal_actions']
+        
         # indices = list(range(len(legal_actions)))
         # index = random.choice(indices)
+        # return list(legal_actions.values())[index]
         if obs['street'] == 0:
             out = legal_actions['call']
         elif obs['street'] in [1, 2]:
@@ -22,11 +23,12 @@ class RandomAgent(BaseAgent):
             if action_type in legal_actions:
                 out = legal_actions[action_type]
             else:
-                out = 0
+                out = legal_actions['call']
         elif obs['street'] == 3:
-            action_type = random.choice(['fold', 'call'])
+            action_type = random.choice(['fold', 'all_in'])
             if action_type in legal_actions:
                 out = legal_actions[action_type]
             else:
                 out = 0
+        print(legal_actions, out)
         return out

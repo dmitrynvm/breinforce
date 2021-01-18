@@ -122,6 +122,7 @@ class HandsView(BaseView):
     def results(self, state):
         items = []
         n_players = self.state['n_players']
+        n_players = self.state['n_players']
         payouts = self.payouts
         hole_cards = self.state['hole_cards']
         board_cards = self.state['board_cards']
@@ -156,20 +157,23 @@ class HandsView(BaseView):
         out = ''
         for item in history:
             state, player, action, info = item
-            out += f"Player{player+1} "
-            if info["action_type"] == "fold":
-                out += "folds"
-            elif info["action_type"] == "check":
-                out += "checks"
-            elif info["action_type"] == "call":
-                out += f"called ${action} chips"
-            elif info["action_type"] == "raise":
-                out += f"raised from ${info['call']} to ${action}"
-            elif info["action_type"] == "all_in":
-                out += f"pushed from ${info['call']} to ${action}"
-            else:
-                out += f"bets {action}"
-            out += '\n'
+            folded = state['folded']
+            print(folded)
+            if True:#folded[player]:
+                out += f"Player{player+1} "
+                if info["action_type"] == "fold":
+                    out += "folds"
+                elif info["action_type"] == "check":
+                    out += "checks"
+                elif info["action_type"] == "call":
+                    out += f"called ${action} chips"
+                elif info["action_type"] == "raise":
+                    out += f"raised from ${info['call']} to ${action}"
+                elif info["action_type"] == "all_in":
+                    out += f"pushed from ${info['call']} to ${action}"
+                else:
+                    out += f"bets {action}"
+                out += '\n'
         return out
 
 # out += f"\t\t\t\t\taction {action} "
