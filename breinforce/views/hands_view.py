@@ -13,7 +13,7 @@ class HandsView(BaseView):
     def render(self) -> str:
         '''Render representation based on the table configuration
         '''
-        output = ''
+        out = ''
         state = self.env.state
         self.state = state
         hand_id = state['hand_id']
@@ -34,57 +34,74 @@ class HandsView(BaseView):
         turn_cards = repr(board_cards[:3]) + '[' + repr(board_cards[3]) + ']'
         river_cards = repr(board_cards[:4]) + '[' + repr(board_cards[4]) + ']'
         self.payouts = state['payouts']
-        self.summary = self.__summary()
+        self.summary = self.__summary(state)
 
         # Header
-        output += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
+        out += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
             f'(${sb}/${bb}/${st} chips) - {date} MSK\n'# [{date2} ET]\n'
         # Table
-        output += f'Table \'{table_name}\' {n_players}-max ' \
+        out += f'Table \'{table_name}\' {n_players}-max ' \
             f'Seat #{button + 1} is the button\n'
         # Seats
         for i, start_stack in enumerate(start_stacks):
             player_id = player_ids[i]
-            output += f'Seat {i+1}: {player_id} (${start_stack} in chips)\n'
+            out += f'Seat {i+1}: {player_id} (${start_stack} in chips)\n'
         # Preflop
-        #output += self.__subhistory(self.env.history, 0)
+        #out += self.__subhistory(self.env.history, 0)
         sb_id = player_ids[button + 1]
-        output += f'{sb_id} posts small blind ${sb}\n'
+        out += f'{sb_id} posts small blind ${sb}\n'
         bb_id = player_ids[button + 2]
-        output += f'{bb_id} posts big blind ${bb}\n'
+        out += f'{bb_id} posts big blind ${bb}\n'
         if n_players > 3:
             st_id = player_ids[button + 3]
-            output += f'{st_id} posts straddle ${st}\n'
+            out += f'{st_id} posts straddle ${st}\n'
         # Dealt
-        output += '*** HOLE CARDS ***\n'
+        out += '*** HOLE CARDS ***\n'
         for player in range(n_players):
             player_id = player_ids[player]
             player_cards = repr(hole_cards[player])
-            output += f'Dealt to {player_id} {player_cards}\n'
+            out += f'Dealt to {player_id} {player_cards}\n'
         # Preflop
-        output += self.__subhistory(self.env.history, 1)
-        # Flop
-        flop = self.__subhistory(self.env.history, 2)
-        if flop:
-            output += f'*** FLOP CARDS *** {flop_cards}\n'
-            output += flop
-        # Turn
-        turn = self.__subhistory(self.env.history, 3)
-        if turn:
-            output += f'*** TURN CARDS *** {turn_cards}\n'
-            output += turn
-        # River
-        river = self.__subhistory(self.env.history, 4)
-        if river:
-            output += f'*** RIVER CARDS *** {river_cards}\n'
-            output += river
-        # Summary
-        output += f'*** SUMMARY ***\n'
-        output += f'Total pot {pot} | rake {pot * rake} -> {int(pot * rake)}\n'
-        output += f'Board {board_cards}\n'
-        output += self.__summary()
+        for item in self.env.history:
+            state, player, action, info = item
+            if state['street'] == 0:
+                out += f'Player{player+1} '
+                if info['action_type'] == 'fold':
+                    out += 'folds'
+                    out += f" (chosen {action} from {info['legal_actions']})"
+                elif info['action_type'] == 'check':
+                    out += 'checks'
+                elif info['action_type'] == 'call':
+                    out += f"called ${action} chips"
+                elif info['action_type'] == 'raise':
+                    out += f"raised from ${info['lower']-action} to ${info['upper']}"
+                else:
+                    out += f'bets {action}'
+                out += '\n'
 
-        self.string = output
+        # out += self.__subhistory(self.env.history, 1)
+        # # Flop
+        # flop = self.__subhistory(self.env.history, 2)
+        # if flop:
+        #     out += f'*** FLOP CARDS *** {flop_cards}\n'
+        #     out += flop
+        # # Turn
+        # turn = self.__subhistory(self.env.history, 3)
+        # if turn:
+        #     out += f'*** TURN CARDS *** {turn_cards}\n'
+        #     out += turn
+        # # River
+        # river = self.__subhistory(self.env.history, 4)
+        # if river:
+        #     out += f'*** RIVER CARDS *** {river_cards}\n'
+        #     out += river
+        # # Summary
+        # out += f'*** SUMMARY ***\n'
+        # out += f'Total pot {pot} | rake {pot * rake} -> {int(pot * rake)}\n'
+        # out += f'Board {board_cards}\n'
+        # out += self.__summary()
+
+        self.string = out
         return self
 
     def __str__(self):
@@ -93,49 +110,49 @@ class HandsView(BaseView):
         return self.string
 
     def __subhistory(self, subhistory, street):
-        output = ''
+        out = ''
         for item in subhistory:
             state, player, action, info = item
             if state['street'] == street:
-                output += f'Player{player+1} '
+                out += f'Player{player+1} '
                 if info['action_type'] == 'small_blind':
-                    output += f'posts small blind ${action}'
+                    out += f'posts small blind ${action}'
                 elif info['action_type'] == 'big_blind':
-                    output += f'posts big blind ${action}'
+                    out += f'posts big blind ${action}'
                 elif info['action_type'] == 'straddle':
-                    output += f'posts straddle ${action}'
+                    out += f'posts straddle ${action}'
                 elif info['action_type'] == 'fold':
-                    output += 'folds'
+                    out += 'folds'
                 elif info['action_type'] == 'check':
-                    output += 'checks'
+                    out += 'checks'
                 elif info['action_type'] == 'call':
-                    output += f"called ${action} chips"
+                    out += f"called ${action} chips"
                 elif info['action_type'] == 'raise':
-                    output += f"raised from ${info['min_raise']-action} to ${info['min_raise']}"
+                    out += f"raised from ${info['min_raise']-action} to ${info['min_raise']}"
                 else:
-                    output += f'bet {action}'
-                output += '\n'
-        return output
+                    out += f'bet {action}'
+                out += '\n'
+        return out
 
-    def __summary(self):
-        output = ''
-        n_players = self.state['n_players']
-        results = self.__results()
+    def __summary(self, state):
+        out = ''
+        n_players = state['n_players']
+        results = self.__results(state)
         # won
         for player, item in enumerate(results):
-            output += f"Seat {player+1}: {results[player]['name']} "
+            out += f"Seat {player+1}: {results[player]['name']} "
             # role
             if results[player]['role']:
-                output += f"({results[player]['role']}) "
+                out += f"({results[player]['role']}) "
             # show
-            output += f"showed {results[player]['hole']} "
+            out += f"showed {results[player]['hole']} "
             if results[player]['won']:
-                output += f"and won {results[player]['won']} "
-                output += f"with {results[player]['rank']}"
-            output += '\n'
-        return output
+                out += f"and won {results[player]['won']} "
+                out += f"with {results[player]['rank']}"
+            out += '\n'
+        return out
 
-    def __results(self):
+    def __results(self, state):
         items = []
         n_players = self.state['n_players']
         payouts = self.payouts

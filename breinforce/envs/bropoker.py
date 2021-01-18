@@ -8,19 +8,13 @@ from breinforce.games.bropoker import Deck, Judge
 from breinforce.views import AsciiView
 
 
-def clean(
-    action: int,
-    call: int,
-    min_raise: int,
-    max_raise: int
-) -> int:
-    lst = [0, call, min_raise, max_raise]
-    idx = np.argmin(np.absolute(np.array(lst) - action))
-    if idx == 1:
-        return call
-    if idx in (2, 3):
-        return round(min(max_raise, max(min_raise, action)))
-    return 0
+def clean(legal_actions, action) -> int:
+    """
+    Find closest bet size to actual bet
+    """
+    index = np.argmin(np.absolute(np.array(legal_actions) - action))
+    return legal_actions[index]
+
 
 
 class Bropoker(gym.Env):
@@ -94,7 +88,7 @@ class Bropoker(gym.Env):
         self.stacks = self.start_stacks.copy()
         self.button = 0
         self.deck.shuffle()
-        self.board_cards = self.deck.draw(self.n_board_cards[0])
+        self.board_cards = self.deck.draw(sum(self.n_board_cards))
         self.history = []
         self.hole_cards = [
             self.deck.draw(self.n_hole_cards) for _
@@ -119,29 +113,44 @@ class Bropoker(gym.Env):
     def act(self, obs: dict) -> int:
         return self.agents[self.player].act(obs)
 
-    def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
-        """Advances poker game to next player. If the action is 0, it is
-        either considered a check or fold, depending on the previous
-        action. The given bet is always rounded to the closest valid bet
-        size. When it is the same distance from two valid bet sizes
-        the smaller action size is used, e.g. if the min raise is 10 and
-        the bet is 5, it is rounded down to 0.
-        action = round(action)
-        """
+    def action_type(self, action):
+        call = self.call()
+        max_raise = self.max_raise()
 
-        call, min_raise, max_raise = self.__action_sizes()
-        action = clean(action, call, min_raise, max_raise)
+        out = None
+        if action == call and call == 0:
+            out = "check"
+        elif action == call and call > 0:
+            out = "call"
+        elif call < action < max_raise:
+            out = "raise"
+        elif action == max_raise:
+            out = "all_in"
+        else:
+            out = "fold"
+        return out
+
+    def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
+        legal_actions = self.legal_actions()
+        action = clean(legal_actions, action)
+        action_type = self.action_type(action)
+        info = {
+            "action_type": action_type,
+            "legal_actions": legal_actions,
+            "lower": self.call(),
+            "upper": action - self.call()
+        }
 
         # only fold if player cannot check
-        if call and ((action < call) or action < 0):
+        if self.call() and ((action < self.call()) or action < 0):
             self.active[self.player] = 0
             action = 0
         # if action is full raise record as largest raise
-        if action and (action - call) >= self.largest_raise:
-            self.largest_raise = action - call
+        if action and (action - self.call()) >= self.largest_raise:
+            self.largest_raise = action - self.call()
         self.__apply_one(action)
 
-        self.history.append((self.state, self.player+1, action))
+        self.history.append((self.state, self.player, action, info))
         self.acted[self.player] = True
         self.move()
 
@@ -178,7 +187,7 @@ class Bropoker(gym.Env):
                 ]
             """
         obs["hole_cards"] = obs["hole_cards"][obs["player"]]
-        return obs, payouts, done, None
+        return obs, payouts, done, info
 
     def __all_agreed(self) -> bool:
         if not all(self.acted):
@@ -188,18 +197,6 @@ class Bropoker(gym.Env):
             | (self.stacks == 0)
             | np.logical_not(self.active)
         )
-
-    def __action_sizes(self) -> Tuple[int, int, int]:
-        if all(self.__done()):
-            call = min_raise = max_raise = 0
-        else:
-            call = self.commits.max() - self.commits[self.player]
-            call = min(call, self.stacks[self.player])
-            min_raise = max(2 * self.straddle, self.largest_raise + call)
-            min_raise = min(min_raise, self.stacks[self.player])
-            max_raise = self.stacks[self.player]
-            max_raise = min(max_raise, self.stacks[self.player])
-        return call, min_raise, max_raise
 
     def __apply_one(self, action: int):
         action = min(self.stacks[self.player], action)
@@ -293,21 +290,13 @@ class Bropoker(gym.Env):
     def register(self, agents: List) -> None:
         self.agents = agents
 
-    @property
     def legal_actions(self):
-        bets = set()
-        # fold/check
-        bets.add(0)
-        # call
-        bets.add(self.call)
-        # raises
+        legal_actions = {0, self.call(), self.max_raise()}
         for split in self.splits:
-            bet = round(split * self.pot)
-            if bet < self.max_raise:
-                bets.add(bet)
-        # all_in
-        bets.add(self.max_raise)
-        return list(sorted(bets))
+            legal_action = round(split * self.pot)
+            if legal_action < self.max_raise():
+                legal_actions.add(legal_action)
+        return list(sorted(legal_actions))
 
     @property
     def observation(self) -> Dict:
@@ -317,10 +306,10 @@ class Bropoker(gym.Env):
             "button": self.button,
             "player": self.player,
             "pot": self.pot,
-            "call": self.call,
-            "max_raise": self.max_raise,
-            "min_raise": self.min_raise,
-            "legal_actions": self.legal_actions,
+            "call": self.call(),
+            "max_raise": self.max_raise(),
+            "min_raise": self.min_raise(),
+            "legal_actions": self.legal_actions(),
             "board_cards": board_cards,
             "hole_cards": hole_cards,
             "active": self.active,
@@ -329,42 +318,6 @@ class Bropoker(gym.Env):
         }
         return obs
 
-    @property
-    def state(self):
-        output = {
-            "table_name": self.table_name,
-            "sb": self.small_blind,
-            "bb": self.big_blind,
-            "st": self.straddle,
-            "hand_id": self.hand_id,
-            "date": self.date,
-            "player_ids": self.player_ids,
-            "hole_cards": self.hole_cards,
-            "start_stacks": self.start_stacks,
-            "player": self.player,
-            "allin": self.active * (self.stacks == 0),
-            "board_cards": self.board_cards,
-            "button": self.button,
-            "done": all(self.__done()),
-            "pot": self.pot,
-            "payouts": self.payouts,
-            "n_players": self.n_players,
-            "n_hole_cards": self.n_hole_cards,
-            "n_board_cards": sum(self.n_board_cards),
-            "rake": self.rake,
-            "antes": self.antes,
-            "street": self.street,
-            "min_raise": self.min_raise,
-            "max_raise": self.max_raise,
-            "acted": self.acted.copy(),
-            "active": self.active.copy(),
-            "stacks": self.stacks.copy(),
-            "call": self.call,
-            "commits": self.commits
-        }
-        return output
-
-    @property
     def call(self) -> int:
         output = 0
         if all(self.__done()):
@@ -374,17 +327,15 @@ class Bropoker(gym.Env):
             output = min(output, self.stacks[self.player])
         return int(output)
 
-    @property
     def min_raise(self) -> int:
         output = None
         if all(self.__done()):
             output = 0
         else:
-            output = max(2 * self.straddle, self.largest_raise + self.call)
+            output = max(2 * self.straddle, self.largest_raise + self.call())
             output = min(output, self.stacks[self.player])
         return int(output)
 
-    @property
     def max_raise(self) -> int:
         output = None
         if all(self.__done()):
@@ -393,32 +344,6 @@ class Bropoker(gym.Env):
             output = self.stacks[self.player]
             output = min(output, self.stacks[self.player])
         return int(output)
-
-    @property
-    def json_state(self):
-        player = self.player
-        player_id = self.player_ids[player]
-        board_cards = str([repr(c) for c in self.board_cards])
-        hole_cards = str([repr(c) for c in self.hole_cards[player]])
-        legal_actions = str([int(a) for a in self.legal_actions])
-
-        out = {
-            "hand": self.hand_id,
-            "street": self.street + 1,
-            "button": self.button + 1,
-            "player": player + 1,
-            "player_id": player_id,
-            "pot": int(self.pot),
-            "call": self.call,
-            "min_raise": self.min_raise,
-            "max_raise": self.max_raise,
-            "active": bool(self.active[self.player]),
-            "board_cards": board_cards,
-            "hole_cards": hole_cards,
-            "legal_actions": legal_actions
-        }
-
-        return out
 
     def collect_antes(self):
         actions = self.antes
@@ -439,3 +364,38 @@ class Bropoker(gym.Env):
 
     def render(self, mode="ascii"):
         return "ascii"
+
+    @property
+    def state(self):
+        out = {
+            "table_name": self.table_name,
+            "street": self.street,
+            "sb": self.small_blind,
+            "bb": self.big_blind,
+            "st": self.straddle,
+            "hand_id": self.hand_id,
+            "date": self.date,
+            "player_ids": self.player_ids,
+            "hole_cards": self.hole_cards,
+            "start_stacks": self.start_stacks,
+            "player": self.player,
+            "allin": self.active * (self.stacks == 0),
+            "board_cards": self.board_cards,
+            "button": self.button,
+            "done": all(self.__done()),
+            "pot": self.pot,
+            "payouts": self.payouts,
+            "n_players": self.n_players,
+            "n_hole_cards": self.n_hole_cards,
+            "n_board_cards": sum(self.n_board_cards),
+            "rake": self.rake,
+            "antes": self.antes,
+            "min_raise": self.min_raise(),
+            "max_raise": self.max_raise(),
+            "acted": self.acted.copy(),
+            "active": self.active.copy(),
+            "stacks": self.stacks.copy(),
+            "call": self.call(),
+            "commits": self.commits
+        }
+        return out
