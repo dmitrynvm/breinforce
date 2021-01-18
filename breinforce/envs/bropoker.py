@@ -91,7 +91,6 @@ def get_legal_actions_dict(state):
         action = int(split * state.pot)
         if action < max_raise:
             out[f"raise_{i+1}"] = action
-    print(out)
     return out
 
 
@@ -102,7 +101,8 @@ def get_payouts(state) -> np.ndarray:
         payouts += state.alive * (state.pot - state.contribs)
     # if last street played and still multiple players alive
     elif state.street >= state.n_streets:
-        payouts = state.__eval_round()
+        print('HEEEE')
+        payouts = evaluate(state)
         payouts -= state.contribs
     if any(payouts > 0):
         state.stacks += payouts + state.contribs
@@ -110,8 +110,8 @@ def get_payouts(state) -> np.ndarray:
 
 
 def get_observation(state) -> Dict:
-    board_cards = [str(c) for c in self.board_cards]
-    hole_cards = [[str(c) for c in cs] for cs in self.hole_cards]
+    board_cards = [str(c) for c in state.board_cards]
+    hole_cards = [[str(c) for c in cs] for cs in state.hole_cards]
     obs: dict = {
         "street": state.street,
         "button": state.button,
@@ -129,6 +129,54 @@ def get_observation(state) -> Dict:
     }
     return obs
 
+def evaluate(state) -> np.ndarray:
+    # grab array of hand strength and pot contribs
+    worst_hand = state.judge.hashmap.max_rank + 1
+    hand_list = []
+    payouts = np.zeros(state.n_players, dtype=int)
+    for player in range(state.n_players):
+        # if not alive hand strength set
+        # to 1 worse than worst possible rank
+        hand_strength = worst_hand
+        if state.alive[player]:
+            hand_strength = state.judge.evaluate(
+                state.hole_cards[player], state.board_cards
+            )
+        hand_list.append([player, hand_strength, state.contribs[player]])
+    hands = np.array(hand_list)
+    # sort hands by hand strength and pot contribs
+    hands = hands[np.lexsort([hands[:, 2], hands[:, 1]])]
+    pot = state.pot
+    remainder = 0
+    # iterate over hand strength and
+    # pot contribs from smallest to largest
+    for idx, (_, strength, contribs) in enumerate(hands):
+        eligible = hands[:, 0][hands[:, 1] == strength].astype(int)
+        # cut can only be as large as lowest player commit amount
+        cut = np.clip(hands[:, 2], None, contribs)
+        split_pot = sum(cut)
+        split = split_pot // len(eligible)
+        remain = split_pot % len(eligible)
+        payouts[eligible] += split
+        remainder += remain
+        # remove chips from players and pot
+        hands[:, 2] -= cut
+        pot -= split_pot
+        # remove player from next split pot
+        hands[idx, 1] = worst_hand
+        if pot == 0:
+            break
+    # give worst position player remainder chips
+    if remainder:
+        # worst player is first player after button involved in pot
+        involved_players = np.nonzero(payouts)[0]
+        button_shift = (involved_players <= state.button) * state.n_players
+        button_shifted_players = involved_players + button_shift
+        worst_idx = np.argmin(button_shifted_players)
+        worst_pos = involved_players[worst_idx]
+        payouts[worst_pos] += remainder
+    return payouts
+
 
 def move_(state):
     for idx in range(1, state.n_players + 1):
@@ -140,7 +188,7 @@ def move_(state):
     state.player = player
 
 
-def perform_(state, action):
+def perform_action_(state, action):
     action = min(state.stacks[state.player], action)
     state.pot += action
     state.contribs[state.player] += action
@@ -264,7 +312,7 @@ class Bropoker(gym.Env):
         move_(self)
         move_(self)
         move_(self)
-        return observation(self)
+        return get_observation(self)
 
     def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
         legal_actions = get_legal_actions(self)
@@ -285,7 +333,7 @@ class Bropoker(gym.Env):
             self.alive[self.player] = 0
             action = 0
 
-        perform_(self, action)
+        perform_action_(self, action)
         self.history.append((self.state, self.player, action, info))
         move_(self)
 
@@ -319,54 +367,6 @@ class Bropoker(gym.Env):
         obs["hole_cards"] = obs["hole_cards"][obs["player"]]
         return obs, payouts, done, info
 
-    def __eval_round(self) -> np.ndarray:
-        # grab array of hand strength and pot contribs
-        worst_hand = self.judge.hashmap.max_rank + 1
-        hand_list = []
-        payouts = np.zeros(self.n_players, dtype=int)
-        for player in range(self.n_players):
-            # if not alive hand strength set
-            # to 1 worse than worst possible rank
-            hand_strength = worst_hand
-            if self.alive[player]:
-                hand_strength = self.judge.evaluate(
-                    self.hole_cards[player], self.board_cards
-                )
-            hand_list.append([player, hand_strength, self.contribs[player]])
-        hands = np.array(hand_list)
-        # sort hands by hand strength and pot contribs
-        hands = hands[np.lexsort([hands[:, 2], hands[:, 1]])]
-        pot = self.pot
-        remainder = 0
-        # iterate over hand strength and
-        # pot contribs from smallest to largest
-        for idx, (_, strength, contribs) in enumerate(hands):
-            eligible = hands[:, 0][hands[:, 1] == strength].astype(int)
-            # cut can only be as large as lowest player commit amount
-            cut = np.clip(hands[:, 2], None, contribs)
-            split_pot = sum(cut)
-            split = split_pot // len(eligible)
-            remain = split_pot % len(eligible)
-            payouts[eligible] += split
-            remainder += remain
-            # remove chips from players and pot
-            hands[:, 2] -= cut
-            pot -= split_pot
-            # remove player from next split pot
-            hands[idx, 1] = worst_hand
-            if pot == 0:
-                break
-        # give worst position player remainder chips
-        if remainder:
-            # worst player is first player after button involved in pot
-            involved_players = np.nonzero(payouts)[0]
-            button_shift = (involved_players <= self.button) * self.n_players
-            button_shifted_players = involved_players + button_shift
-            worst_idx = np.argmin(button_shifted_players)
-            worst_pos = involved_players[worst_idx]
-            payouts[worst_pos] += remainder
-        return payouts
-
     def render(self, mode="ascii"):
         return "ascii"
 
@@ -384,10 +384,8 @@ class Bropoker(gym.Env):
             "hole_cards": self.hole_cards,
             "start_stacks": self.start_stacks,
             "player": self.player,
-            "allin": self.alive * (self.stacks == 0),
             "board_cards": self.board_cards,
             "button": self.button,
-            "done": all(get_done(self)),
             "pot": self.pot,
             "payouts": get_payouts(self),
             "n_players": self.n_players,
