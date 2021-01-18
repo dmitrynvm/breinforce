@@ -68,7 +68,6 @@ class Bropoker(gym.Env):
         self.button = 0
         self.player = -1
         self.pot = 0
-        self.largest_raise = 0
         self.active = np.zeros(self.n_players, dtype=np.uint8)
         self.contribs = np.zeros(self.n_players, dtype=np.int32)
         self.stacks = np.array(stacks, dtype=np.int16)
@@ -88,13 +87,12 @@ class Bropoker(gym.Env):
         self.stacks = self.start_stacks.copy()
         self.button = 0
         self.deck.shuffle()
-        self.board_cards = self.deck.draw(sum(self.n_board_cards))
+        self.board_cards = self.deck.draw(self.n_board_cards[0])
         self.history = []
         self.hole_cards = [
             self.deck.draw(self.n_hole_cards) for _
             in range(self.n_players)
         ]
-        self.largest_raise = self.straddle
         self.pot = 0
         self.contribs.fill(0)
         self.street = 0
@@ -103,9 +101,9 @@ class Bropoker(gym.Env):
         self.player = self.button
         if self.n_players > 2:
             self.move()
-        
         self.collect_antes()
         self.collect_blinds()
+        self.move()
         self.move()
         self.move()
         return self.observation
@@ -132,22 +130,22 @@ class Bropoker(gym.Env):
 
     def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
         legal_actions = self.legal_actions()
+        legal_actions_dict = self.legal_actions_dict()
         action = clean(legal_actions, action)
         action_type = self.action_type(action)
         info = {
             "action_type": action_type,
             "legal_actions": legal_actions,
-            "lower": self.call(),
-            "upper": action - self.call()
+            "call": self.call(),
+            "min_raise": self.min_raise(),
+            "max_raise": self.max_raise(),
+            "stack": self.stacks[self.player]
         }
 
-        # only fold if player cannot check
         if self.call() and ((action < self.call()) or action < 0):
             self.active[self.player] = 0
             action = 0
-        # if action is full raise record as largest raise
-        if action and (action - self.call()) >= self.largest_raise:
-            self.largest_raise = action - self.call()
+
         self.__apply_one(action)
 
         self.history.append((self.state, self.player, action, info))
@@ -162,10 +160,9 @@ class Bropoker(gym.Env):
             # board cards and evaluate hand
             while True:
                 self.street += 1
-                full_streets = self.street >= self.n_streets
                 allin = self.active * (self.stacks == 0)
                 all_allin = sum(self.active) - sum(allin) <= 1
-                if full_streets:
+                if self.street >= self.n_streets:
                     break
                 self.board_cards += self.deck.draw(
                     self.n_board_cards[self.street]
@@ -291,25 +288,36 @@ class Bropoker(gym.Env):
         self.agents = agents
 
     def legal_actions(self):
-        legal_actions = {0, self.call(), self.max_raise()}
+        outs = {0, self.call(), self.max_raise()}
         for split in self.splits:
-            legal_action = round(split * self.pot)
-            if legal_action < self.max_raise():
-                legal_actions.add(legal_action)
-        return list(sorted(legal_actions))
+            out = int(split * self.pot)
+            if out < self.max_raise():
+                outs.add(out)
+        
+        return list(sorted(outs))
+
+    def legal_actions_dict(self):
+        out = {'fold': 0, 'call': self.call(), 'all_in': self.max_raise()}
+        for i, split in enumerate(self.splits):
+            action = int(split * self.pot)
+            if action < self.max_raise():
+                out[f"raise_{i+1}"] = action
+        print(out)
+        return out
 
     @property
     def observation(self) -> Dict:
         board_cards = [str(c) for c in self.board_cards]
         hole_cards = [[str(c) for c in cs] for cs in self.hole_cards]
         obs: dict = {
+            "street": self.street,
             "button": self.button,
             "player": self.player,
             "pot": self.pot,
             "call": self.call(),
             "max_raise": self.max_raise(),
             "min_raise": self.min_raise(),
-            "legal_actions": self.legal_actions(),
+            "legal_actions": self.legal_actions_dict(),
             "board_cards": board_cards,
             "hole_cards": hole_cards,
             "active": self.active,
@@ -319,31 +327,26 @@ class Bropoker(gym.Env):
         return obs
 
     def call(self) -> int:
-        output = 0
+        out = 0
         if all(self.__done()):
-            output = 0
+            out = 0
         else:
-            output = self.commits.max() - self.commits[self.player]
-            output = min(output, self.stacks[self.player])
-        return int(output)
+            out = self.commits.max() - self.commits[self.player]
+            out = min(out, self.stacks[self.player])
+        return out
 
     def min_raise(self) -> int:
-        output = None
-        if all(self.__done()):
-            output = 0
-        else:
-            output = max(2 * self.straddle, self.largest_raise + self.call())
-            output = min(output, self.stacks[self.player])
-        return int(output)
+        out = 0
+        if not all(self.__done()):
+            out = max(self.straddle, self.call())
+            out = min(out, self.stacks[self.player])
+        return out
 
     def max_raise(self) -> int:
-        output = None
-        if all(self.__done()):
-            output = 0
-        else:
-            output = self.stacks[self.player]
-            output = min(output, self.stacks[self.player])
-        return int(output)
+        out = 0
+        if not all(self.__done()):
+            out = min(self.stacks[self.player], self.raise_sizes[self.street])
+        return out
 
     def collect_antes(self):
         actions = self.antes
@@ -395,7 +398,6 @@ class Bropoker(gym.Env):
             "acted": self.acted.copy(),
             "active": self.active.copy(),
             "stacks": self.stacks.copy(),
-            "call": self.call(),
             "commits": self.commits
         }
         return out
