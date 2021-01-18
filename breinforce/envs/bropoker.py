@@ -119,7 +119,7 @@ class Bropoker(gym.Env):
         self.button = 0
         self.player = -1
         self.pot = 0
-        self.active = np.zeros(self.n_players, dtype=np.uint8)
+        self.alive = np.zeros(self.n_players, dtype=np.uint8)
         self.contribs = np.zeros(self.n_players, dtype=np.int32)
         self.stacks = np.array(stacks, dtype=np.int16)
         self.acted = np.zeros(self.n_players, dtype=np.uint8)
@@ -134,7 +134,7 @@ class Bropoker(gym.Env):
         """Resets the hash table. Shuffles the deck, deals new hole cards
         to all players, moves the button and collects blinds and antes.
         """
-        self.active.fill(1)
+        self.alive.fill(1)
         self.stacks = self.start_stacks.copy()
         self.button = 0
         self.deck.shuffle()
@@ -178,7 +178,7 @@ class Bropoker(gym.Env):
         }
 
         if call and ((action < call) or action < 0):
-            self.active[self.player] = 0
+            self.alive[self.player] = 0
             action = 0
 
         perform(self, action)
@@ -189,12 +189,12 @@ class Bropoker(gym.Env):
         if self.__all_agreed():
             self.player = self.button
             self.move()
-            # if at most 1 player active and not all in turn up all
+            # if at most 1 player alive and not all in turn up all
             # board cards and evaluate hand
             while True:
                 self.street += 1
-                allin = self.active * (self.stacks == 0)
-                all_allin = sum(self.active) - sum(allin) <= 1
+                allin = self.alive * (self.stacks == 0)
+                all_allin = sum(self.alive) - sum(allin) <= 1
                 if self.street >= self.n_streets:
                     break
                 self.board_cards += self.deck.draw(
@@ -203,7 +203,7 @@ class Bropoker(gym.Env):
                 if not all_allin:
                     break
             self.commits.fill(0)
-            self.acted = np.logical_not(self.active).astype(np.uint8)
+            self.acted = np.logical_not(self.alive).astype(np.uint8)
 
         obs, payouts, done, _ = self.__output()
         self.payouts = payouts
@@ -219,22 +219,20 @@ class Bropoker(gym.Env):
         return all(
             (self.commits == self.commits.max())
             | (self.stacks == 0)
-            | np.logical_not(self.active)
+            | np.logical_not(self.alive)
         )
 
-
-
     def done(self) -> List[bool]:
-        if self.street >= self.n_streets or sum(self.active) <= 1:
+        if self.street >= self.n_streets or sum(self.alive) <= 1:
             return np.full(self.n_players, 1)
-        return np.logical_not(self.active)
+        return np.logical_not(self.alive)
 
     def __payouts(self) -> np.ndarray:
         # players that have folded lose their actions
-        payouts = -1 * self.contribs * np.logical_not(self.active)
-        if sum(self.active) == 1:
-            payouts += self.active * (self.pot - self.contribs)
-        # if last street played and still multiple players active
+        payouts = -1 * self.contribs * np.logical_not(self.alive)
+        if sum(self.alive) == 1:
+            payouts += self.alive * (self.pot - self.contribs)
+        # if last street played and still multiple players alive
         elif self.street >= self.n_streets:
             payouts = self.__eval_round()
             payouts -= self.contribs
@@ -254,10 +252,10 @@ class Bropoker(gym.Env):
         hand_list = []
         payouts = np.zeros(self.n_players, dtype=int)
         for player in range(self.n_players):
-            # if not active hand strength set
+            # if not alive hand strength set
             # to 1 worse than worst possible rank
             hand_strength = worst_hand
-            if self.active[player]:
+            if self.alive[player]:
                 hand_strength = self.judge.evaluate(
                     self.hole_cards[player], self.board_cards
                 )
@@ -299,7 +297,7 @@ class Bropoker(gym.Env):
     def move(self):
         for idx in range(1, self.n_players + 1):
             player = (self.player + idx) % self.n_players
-            if self.active[player]:
+            if self.alive[player]:
                 break
             else:
                 self.acted[player] = True
@@ -343,7 +341,7 @@ class Bropoker(gym.Env):
             "legal_actions": self.legal_actions_dict(),
             "board_cards": board_cards,
             "hole_cards": hole_cards,
-            "active": self.active,
+            "alive": self.alive,
             "stacks": self.stacks,
             "commits": self.commits
         }
@@ -353,7 +351,7 @@ class Bropoker(gym.Env):
     def collect_antes(self):
         actions = self.antes
         actions = np.roll(actions, self.player)
-        actions = (self.stacks > 0) * self.active * actions
+        actions = (self.stacks > 0) * self.alive * actions
         self.pot += sum(actions)
         self.contribs += actions
         self.stacks -= actions
@@ -361,7 +359,7 @@ class Bropoker(gym.Env):
     def collect_blinds(self):
         actions = self.blinds
         actions = np.roll(actions, self.player)
-        actions = (self.stacks > 0) * self.active * actions
+        actions = (self.stacks > 0) * self.alive * actions
         self.pot += sum(actions)
         self.commits += actions
         self.contribs += actions
@@ -384,7 +382,7 @@ class Bropoker(gym.Env):
             "hole_cards": self.hole_cards,
             "start_stacks": self.start_stacks,
             "player": self.player,
-            "allin": self.active * (self.stacks == 0),
+            "allin": self.alive * (self.stacks == 0),
             "board_cards": self.board_cards,
             "button": self.button,
             "done": all(self.done()),
@@ -398,7 +396,7 @@ class Bropoker(gym.Env):
             "min_raise": get_min_raise(self),
             "max_raise": get_max_raise(self),
             "acted": self.acted.copy(),
-            "active": self.active.copy(),
+            "alive": self.alive.copy(),
             "stacks": self.stacks.copy(),
             "commits": self.commits
         }
