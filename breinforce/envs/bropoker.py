@@ -272,7 +272,7 @@ class Bropoker(gym.Env):
         self.stacks = np.array(stacks, dtype=np.int16)
         self.acted = np.zeros(self.n_players, dtype=np.uint8)
         self.commits = np.zeros(self.n_players, dtype=np.int32)
-        self.folded = [-1 for i in range(self.n_players)]
+        self.folded = [n_streets for i in range(self.n_players)]
         self.history = []
 
         self.deck = Deck(self.n_suits, self.n_ranks)

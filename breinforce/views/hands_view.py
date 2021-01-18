@@ -109,13 +109,17 @@ class HandsView(BaseView):
         for player, item in enumerate(results):
             out += f"Seat {player+1}: {results[player]['name']} "
             # role
-            if results[player]['role']:
+            fold = results[player]['fold']
+            if fold < state['street']:
+                out += "folded before flop"
+            elif results[player]['won']:
                 out += f"({results[player]['role']}) "
-            # show
-            out += f"showed {results[player]['hole']} "
-            if results[player]['won']:
+                out += f"showed {results[player]['hole']} "
                 out += f"and won ${results[player]['won']} "
                 out += f"with {results[player]['rank']}"
+            else:
+                out += f"({results[player]['role']}) "
+                out += f"showed {results[player]['hole']} "
             out += '\n'
         return out
 
@@ -134,7 +138,7 @@ class HandsView(BaseView):
                 'won': None,
                 'hole': hole_cards[player],
                 'rank': None,
-                'flop': None
+                'fold': None
             }
             item['name'] = self.state['player_ids'][player]
             if player == 0:
@@ -150,6 +154,7 @@ class HandsView(BaseView):
             rank_val = self.env.judge.evaluate(hole_cards[player], board_cards)
             rank = self.env.judge.get_rank_class(rank_val)
             item['rank'] = rank
+            item['fold'] = state['folded'][player]
             items.append(item)
         return items
 
@@ -158,8 +163,7 @@ class HandsView(BaseView):
         for item in history:
             state, player, action, info = item
             folded = state['folded']
-            print(folded)
-            if True:#folded[player]:
+            if folded[player] >= state['street']:
                 out += f"Player{player+1} "
                 if info["action_type"] == "fold":
                     out += "folds"
