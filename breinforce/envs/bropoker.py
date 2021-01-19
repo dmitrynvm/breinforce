@@ -27,7 +27,7 @@ def get_call(state) -> int:
 def get_min_raise(state) -> int:
     out = 0
     if not all(get_done(state)):
-        out = max(state.straddle, get_call(state))
+        out = max(state.straddle, get_call(state) + state.largest)
         out = min(out, state.stacks[state.player])
     return out
 
@@ -78,7 +78,7 @@ def get_legal_actions(state):
     max_raise = get_max_raise(state)
     outs = {0, call, max_raise}
     for split in state.splits:
-        out = int(split * state.pot)
+        out = get_call(state) + int(split * state.pot)
         if out < get_max_raise(state):
             outs.add(out)
     return list(sorted(outs))
@@ -88,7 +88,7 @@ def get_legal_actions_dict(state):
     max_raise = get_max_raise(state)
     out = {'fold': 0, 'call': get_call(state), 'all_in': max_raise}
     for i, split in enumerate(state.splits):
-        action = int(split * state.pot)
+        action = get_call(state) + int(split * state.pot)
         if action < max_raise:
             out[f"raise_{i+1}"] = action
     return out
@@ -266,6 +266,7 @@ class Bropoker(gym.Env):
         self.street = 0
         self.button = 0
         self.player = -1
+        self.largest = 0
         self.pot = 0
         self.alive = np.zeros(self.n_players, dtype=np.uint8)
         self.contribs = np.zeros(self.n_players, dtype=np.int32)
@@ -299,12 +300,13 @@ class Bropoker(gym.Env):
             self.deck.draw(self.n_hole_cards) for _
             in range(self.n_players)
         ]
-        self.pot = 0
-        self.contribs.fill(0)
+        self.player = self.button
         self.street = 0
+        self.pot = 0
+        self.largest = self.blinds[2]
+        self.contribs.fill(0)
         self.commits.fill(0)
         self.acted.fill(0)
-        self.player = self.button
         if self.n_players > 2:
             move_(self)
         perform_antes_(self)
@@ -329,6 +331,11 @@ class Bropoker(gym.Env):
             "stack": self.stacks[self.player]
         }
 
+        # larg
+        if action and (action - call) >= self.largest:
+            self.largest = action - call
+
+        # fold
         if call and ((action < call) or action < 0):
             action = 0
             self.alive[self.player] = 0
