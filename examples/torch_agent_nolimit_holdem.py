@@ -14,11 +14,13 @@ import torch.nn.functional as F
 
 def preprocess_data_train(df):
     df = df.copy()
-    all_cards = ['2♠', '2♣', '2♥', '2♦', '3♠', '3♣', '3♥', '3♦', '4♠', '4♣', '4♥',
-            '4♦', '5♠', '5♣', '5♥', '5♦', '6♠', '6♣', '6♥', '6♦', '7♠', '7♣',
-            '7♥', '7♦', '8♠', '8♣', '8♥', '8♦', '9♠', '9♣', '9♥', '9♦', 'A♠',
-            'A♣', 'A♥', 'A♦', 'J♠', 'J♣', 'J♥', 'J♦', 'K♠', 'K♣', 'K♥', 'K♦',
-            'Q♠', 'Q♣', 'Q♥', 'Q♦', 'T♠', 'T♣', 'T♥', 'T♦']
+    all_cards = [
+        '2♠', '2♣', '2♥', '2♦', '3♠', '3♣', '3♥', '3♦', '4♠', '4♣', '4♥',
+        '4♦', '5♠', '5♣', '5♥', '5♦', '6♠', '6♣', '6♥', '6♦', '7♠', '7♣',
+        '7♥', '7♦', '8♠', '8♣', '8♥', '8♦', '9♠', '9♣', '9♥', '9♦', 'A♠',
+        'A♣', 'A♥', 'A♦', 'J♠', 'J♣', 'J♥', 'J♦', 'K♠', 'K♣', 'K♥', 'K♦',
+        'Q♠', 'Q♣', 'Q♥', 'Q♦', 'T♠', 'T♣', 'T♥', 'T♦'
+    ]
 
     card_encoder = OneHotEncoder(handle_unknown="ignore", sparse=False)
     card_encoder.fit(np.array(all_cards).reshape(-1, 1))
@@ -75,11 +77,11 @@ def preprocess_state(obs):
 class DQN(nn.Module):
     def __init__(self, input_features_size): # improve NN
         super().__init__()
-        
+
         self.fc1 = nn.Linear(in_features=input_features_size, out_features=24)
         self.fc2 = nn.Linear(in_features=24, out_features=32)
         self.out = nn.Linear(in_features=32, out_features=6)
-    
+
     def forward(self, t):
         t = t.flatten(start_dim=1)
         t = F.relu(self.fc1(t))

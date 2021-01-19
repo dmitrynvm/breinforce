@@ -110,15 +110,14 @@ class HandsView(BaseView):
             out += f"Seat {player+1}: {results[player]['name']} "
             # role
             fold = results[player]['fold']
+            out += f"({results[player]['role']}) "
             if fold < state['street']:
                 out += "folded before flop"
             elif results[player]['won']:
-                out += f"({results[player]['role']}) "
                 out += f"showed {results[player]['hole']} "
                 out += f"and won ${results[player]['won']} "
                 out += f"with {results[player]['rank']}"
             else:
-                out += f"({results[player]['role']}) "
                 out += f"showed {results[player]['hole']} "
             out += '\n'
         return out

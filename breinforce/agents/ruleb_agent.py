@@ -3,7 +3,7 @@ from typing import List
 from . import BaseAgent
 
 
-class RandomAgent(BaseAgent):
+class RulebAgent(BaseAgent):
 
     def __init__(self, probs: List[float]):
         super().__init__()
@@ -11,9 +11,6 @@ class RandomAgent(BaseAgent):
 
     def act(self, obs):
         legal_actions = obs['legal_actions']
-        # indices = list(range(len(legal_actions)))
-        # index = random.choice(indices)
-        # return list(legal_actions.values())[index]
         if obs['street'] == 0:
             out = legal_actions['call']
         elif obs['street'] in [1, 2]:
@@ -28,5 +25,5 @@ class RandomAgent(BaseAgent):
                 out = legal_actions[action_type]
             else:
                 out = 0
-        # print(legal_actions, out)
+        print(legal_actions, out)
         return out
