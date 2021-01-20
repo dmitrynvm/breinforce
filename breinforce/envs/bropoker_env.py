@@ -27,10 +27,8 @@ def get_call(state) -> int:
 def get_min_raise(state) -> int:
     out = 0
     if not all(get_done(state)):
-        print(state.straddle, state.largest)
         out = max(state.straddle, get_call(state) + state.largest)
         out = min(out, state.stacks[state.player])
-        print(out)
     return out
 
 
