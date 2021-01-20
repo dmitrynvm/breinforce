@@ -27,12 +27,12 @@ def configure():
             for name, config in game_configs[game].items():
                 game_configs[game][name] = parse_config(config)
                 game_config = game_configs[game]
-                env_entry_point = "breinforce.envs:Bropoker"
+                env_entry_point = "breinforce.envs:BropokerEnv"
                 env_ids = [env.id for env in gym.envs.registry.all()]
                 for env_id, env_config in game_config.items():
                     if env_id not in env_ids:
                         gym.envs.registration.register(
                             id=env_id,
                             entry_point=env_entry_point,
-                            kwargs=env_config
+                            kwargs={"config": env_config}
                         )

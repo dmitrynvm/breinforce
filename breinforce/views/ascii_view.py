@@ -40,7 +40,7 @@ class AsciiView(BaseView):
         state = self.env.state()
         self.n_players = state["n_players"]
         self.n_hole_cards = state["n_hole_cards"]
-        self.n_board_cards = state["n_board_cards"]
+        self.ns_board_cards = state["ns_board_cards"]
         self.player_pos = self.POS_DICT[self.n_players]
         player = state["player"]
         button = state["button"]

@@ -21,9 +21,12 @@ obs = env.reset()
 
 
 while True:
-    action = env.act(obs)
-    obs, rewards, done, info = env.step(action)
-    if all(done):
-        break
+    # action = env.act(obs)
+    obs = env.observation_space.sample()
+    print(obs)
+    print('end')
+    # obs, rewards, done, info = env.step(action)
+    # if all(done):
+    #     break
 
 print(hh.render())

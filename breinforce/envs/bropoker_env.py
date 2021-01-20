@@ -27,8 +27,10 @@ def get_call(state) -> int:
 def get_min_raise(state) -> int:
     out = 0
     if not all(get_done(state)):
+        print(state.straddle, state.largest)
         out = max(state.straddle, get_call(state) + state.largest)
         out = min(out, state.stacks[state.player])
+        print(out)
     return out
 
 
@@ -216,44 +218,29 @@ def perform_blinds_(state):
 
 
 
-class Bropoker(gym.Env):
-
-    def __init__(
-            self,
-            n_players: int,
-            n_streets: int,
-            n_suits: int,
-            n_ranks: int,
-            n_hole_cards: int,
-            n_cards_for_hand: int,
-            rake: float,
-            raise_sizes: List[float],
-            n_board_cards: List[int],
-            blinds: List[int],
-            antes: List[int],
-            stacks: List[int],
-            splits: List[str]
-    ) -> None:
+class BropokerEnv(gym.Env):
+    def __init__(self, config) -> None:
 
         # envs
-        self.n_players = n_players
-        self.n_streets = n_streets
-        self.n_suits = n_suits
-        self.n_ranks = n_ranks
-        self.n_hole_cards = n_hole_cards
-        self.n_cards_for_hand = n_cards_for_hand
-        self.rake = rake
-        self.raise_sizes = raise_sizes
-        self.n_board_cards = n_board_cards
-        self.blinds = np.array(blinds, dtype=int)
-        self.antes = np.array(antes, dtype=int)
-        self.splits = splits
-        self.start_stacks = np.array(stacks, dtype=int)
+        self.n_players = config["n_players"]
+        self.n_streets = config["n_streets"]
+        self.n_suits = config["n_suits"]
+        self.n_ranks = config["n_ranks"]
+        self.n_hole_cards = config["n_hole_cards"]
+        self.n_cards_for_hand = config["n_cards_for_hand"]
+        self.rake = config["rake"]
+        self.raise_sizes = config["raise_sizes"]
+        self.ns_board_cards = config["ns_board_cards"]
+        self.blinds = np.array(config["blinds"], dtype=int)
+        self.antes = np.array(config["antes"], dtype=int)
+        self.splits = config["splits"]
+        self.start_stacks = np.array(config["stacks"], dtype=int)
+        self.stacks = np.array(config["stacks"], dtype=np.int16)
 
         # agnt
-        self.small_blind = blinds[0]
-        self.big_blind = blinds[1] if n_players > 2 else None
-        self.straddle = blinds[2] if n_players > 3 else None
+        self.small_blind = config["blinds"][0]
+        self.big_blind = config["blinds"][1] if self.n_players > 2 else None
+        self.straddle = config["blinds"][2] if self.n_players > 3 else None
         self.hand_id = "hand_1"
         self.date = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
         self.table_name = "table_1"
@@ -270,15 +257,41 @@ class Bropoker(gym.Env):
         self.pot = 0
         self.alive = np.zeros(self.n_players, dtype=np.uint8)
         self.contribs = np.zeros(self.n_players, dtype=np.int32)
-        self.stacks = np.array(stacks, dtype=np.int16)
+        
         self.acted = np.zeros(self.n_players, dtype=np.uint8)
         self.commits = np.zeros(self.n_players, dtype=np.int32)
-        self.folded = [n_streets for i in range(self.n_players)]
+        self.folded = [self.n_streets for i in range(self.n_players)]
         self.history = []
 
         self.deck = Deck(self.n_suits, self.n_ranks)
-        self.judge = Judge(n_suits, n_ranks, n_cards_for_hand)
+        self.judge = Judge(self.n_suits, self.n_ranks, self.n_cards_for_hand)
         self.agents = None
+
+        max_action = sum(self.stacks)
+        self.action_space = gym.spaces.Discrete(max_action)
+        n_board_cards = sum(self.ns_board_cards)
+        card_space = gym.spaces.Tuple(
+            (gym.spaces.Discrete(self.n_ranks), gym.spaces.Discrete(self.n_suits))
+        )
+        hole_card_space = gym.spaces.Tuple((card_space,) * self.n_hole_cards)
+
+        self.observation_space = gym.spaces.Dict(
+            {
+                "action": gym.spaces.Discrete(self.n_players),
+                "alive": gym.spaces.MultiBinary(self.n_players),
+                "button": gym.spaces.Discrete(self.n_players),
+                "call": gym.spaces.Discrete(max_action),
+                "board_cards": gym.spaces.Tuple((card_space,) * n_board_cards),
+                "hole_cards": gym.spaces.Tuple((hole_card_space,) * self.n_players),
+                "max_raise": gym.spaces.Discrete(max_action),
+                "min_raise": gym.spaces.Discrete(max_action),
+                "pot": gym.spaces.Discrete(max_action),
+                "stacks": gym.spaces.Tuple((gym.spaces.Discrete(max_action),) * self.n_players),
+                "street_commits": gym.spaces.Tuple(
+                    (gym.spaces.Discrete(max_action),) * self.n_players
+                )
+            }
+        )
 
     def register(self, agents: List) -> None:
         self.agents = agents
@@ -294,7 +307,7 @@ class Bropoker(gym.Env):
         self.stacks = self.start_stacks.copy()
         self.button = 0
         self.deck.shuffle()
-        self.board_cards = self.deck.draw(self.n_board_cards[0])
+        self.board_cards = self.deck.draw(self.ns_board_cards[0])
         self.history = []
         self.hole_cards = [
             self.deck.draw(self.n_hole_cards) for _
@@ -358,7 +371,7 @@ class Bropoker(gym.Env):
                 if self.street >= self.n_streets:
                     break
                 self.board_cards += self.deck.draw(
-                    self.n_board_cards[self.street]
+                    self.ns_board_cards[self.street]
                 )
                 if not all_allin:
                     break
@@ -398,7 +411,7 @@ class Bropoker(gym.Env):
             "payouts": get_payouts(self),
             "n_players": self.n_players,
             "n_hole_cards": self.n_hole_cards,
-            "n_board_cards": sum(self.n_board_cards),
+            "ns_board_cards": sum(self.ns_board_cards),
             "rake": self.rake,
             "antes": self.antes,
             "min_raise": get_min_raise(self),

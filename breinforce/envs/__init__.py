@@ -1,5 +1,5 @@
-from .bropoker import Bropoker
+from .bropoker_env import BropokerEnv
 
 __all__ = [
-    "Bropoker"
+    "BropokerEnv"
 ]
