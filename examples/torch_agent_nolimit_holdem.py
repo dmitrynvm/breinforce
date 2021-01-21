@@ -15,6 +15,7 @@ import plotly.graph_objects as go
 np.random.seed(1)
 pd.options.plotting.backend = "plotly"
 
+Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward'))
 
 
 def encode_data(df):
@@ -53,6 +54,7 @@ def encode_data(df):
     return new_norm_new_merged_df, card_encoder, norm
 
 
+
 def encode_obs(obs):
     board_cards = obs['board_cards'] + ['--' for i in range(5-len(obs['board_cards']))]
     hole_cards = obs['hole_cards']
@@ -75,7 +77,7 @@ def extract(experiences):
     batch = Experience(*zip(*experiences))
     t1 = torch.cat(batch.state)
     t2 = torch.cat(batch.action)
-    t3 = torch.cat(batch.reward)
+    t3 = torch.stack(batch.reward, axis=0)
     t4 = torch.cat(batch.next_state)
     return (t1, t2, t3, t4)
 
@@ -105,11 +107,12 @@ def get_current(policy_nn, states, actions):
 
 
 def get_next(target_nn, next_states):
+    device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
     final_state_locations = next_states.flatten(start_dim=1).max(dim=1)[0].eq(0).type(torch.bool)
     non_final_state_locations = (final_state_locations == False)
     non_final_states = next_states[non_final_state_locations]
     batch_size = next_states.shape[0]
-    values = torch.zeros(batch_size).to(QValues.device)
+    values = torch.zeros(batch_size).to(device)
     values[non_final_state_locations] = target_nn(non_final_states).max(dim=1)[0].detach()
     return values
 
@@ -140,6 +143,25 @@ class DQNetwork(nn.Module):
 
 
 class DQAgent():
+    def __init__(self, strategy, num_actions, device):
+        self.current_step = 0
+        self.strategy = strategy
+        self.num_actions = num_actions
+        self.device = device
+
+    def predict(self, state, policy_net):
+        rate = self.strategy.rate(self.current_step)
+        self.current_step += 1
+
+        if rate > random.random():
+            action = random.randrange(self.num_actions) # explore
+            return torch.tensor([action]).to(self.device)
+        else:
+            with torch.no_grad():
+                return policy_net(state).argmax(dim=1).to(self.device) # exploit
+
+'''
+class DQAgent():
     def __init__(self, strategy, n_actions, device):
         self.step = 0
         self.strategy = strategy
@@ -157,8 +179,8 @@ class DQAgent():
         else:
             with torch.no_grad():
                 out = policy_nn(state).argmax(dim=1).to(self.device) # exploit
-        #print(out)
-        return out.numpy()[0]
+        return out.numpy()[0] if out else 0
+'''
 
 
 def run():
@@ -170,10 +192,10 @@ def run():
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
+    n_epochs = 100
     n_episodes = 100
 
     utils.configure()
-    Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward'))
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     strategy = GreedyQStrategy(eps_start, eps_stop, eps_decay)
     agent = DQAgent(strategy, 6, device)
@@ -186,85 +208,93 @@ def run():
     optimizer = optim.Adam(params=policy_nn.parameters(), lr=lr_decay)
 
 
-    wins = [0, 0, 0, 0, 0, 0]
-    for episode in range(n_episodes):
-        env = gym.make('CustomSixPlayer-v0')
-        probs = [0.0, 0.2, 0.2, 0.2, 0.2, 0.2]
-        players = [agents.RandomAgent(probs)] * 5 + [agents.BaseAgent()]
-        env.register(players)
-        obs = env.reset()
-        step = 0
+    pots = []
+    for epoch in range(n_epochs):
+        epoch_pots = np.array([0, 0, 0, 0, 0, 0])
+        for episode in range(n_episodes):
+            env = gym.make('CustomSixPlayer-v0')
+            probs = [0.0, 0.2, 0.2, 0.2, 0.2, 0.2]
+            players = [agents.RandomAgent(probs)] * 5 + [agents.BaseAgent()]
+            env.register(players)
+            obs = env.reset()
+            step = 0
 
-        while True:
-            step += 1
-            if obs['player'] < 5:
-                action = env.act(obs)
-                obs, rewards, done, info = env.step(action)
-                enc_obs = encode_obs(obs)
-            else:
-                action = agent.predict(enc_obs.float(), policy_nn)
-                player_id = obs['player']
-                action_type = action#.numpy()[0]
-                #print(action_type)
-                if action_type == 0:
-                    action_sum = -1
-                elif action_type == 5:
-                    action_sum = obs['stacks'][obs['player']]
-                elif action_type == 1:
-                    action_sum = obs['call']
+            while True:
+                step += 1
+                if obs['player'] < 5:
+                    action = env.act(obs)
+                    obs, rewards, done, info = env.step(action)
+                    enc_obs = encode_obs(obs)
                 else:
-                    action_sum = 100#fracs[action_type] * obs['pot']
+                    action = agent.predict(enc_obs.float(), policy_nn)
+                    player_id = obs['player']
+                    action_type = action#.numpy()[0]
+                    if action_type == 0:
+                        action_sum = -1
+                    elif action_type == 5:
+                        action_sum = obs['stacks'][obs['player']]
+                    elif action_type == 1:
+                        action_sum = obs['call']
+                    else:
+                        action_sum = 100#fracs[action_type] * obs['pot']
 
-                obs, rewards, done, info = env.step(action_sum)
-                reward = torch.from_numpy(np.array([rewards[player_id]]))
-                next_enc_obs = encode_obs(obs)
-                memory.add(Experience(enc_obs.float(), action, next_enc_obs.float(), reward))
+                    obs, rewards, done, info = env.step(action_sum)
+                    reward = torch.from_numpy(np.array(rewards[player_id]))
+                    next_enc_obs = encode_obs(obs)
+                    memory.add(Experience(enc_obs.float(), action, next_enc_obs.float(), reward))
 
-                if memory.ready(batch_size):
-                    states, actions, rewards, next_states = memory.sample(batch_size)
-                    current_q_values = get_current(policy_nn, states, actions)
-                    next_q_values = get_next(target_nn, next_states)
-                    target_q_values = (next_q_values * gamma) + rewards
-                    loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+                    if memory.ready(batch_size):
+                        states, actions, rewards, next_states = memory.sample(batch_size)
+                        current_q_values = get_current(policy_nn, states, actions)
+                        next_q_values = get_next(target_nn, next_states)
+                        target_q_values = (next_q_values * gamma) + rewards
+                        loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
 
-            if all(done):
-                break
+                if all(done):
+                    break
 
-        if episode % target_update == 0:
-            target_nn.load_state_dict(policy_nn.state_dict())
+            if episode % target_update == 0:
+                target_nn.load_state_dict(policy_nn.state_dict())
 
-        print('Episode: ', episode+1)
-        #print(env.render())
-        x1 = []
-        x2 = []
-        x3 = []
-        x4 = []
-        x5 = []
-        x6 = []
-        xx = np.linspace(0, 20, 20)
-        fig = go.Figure()
-        for item in env.history:
-            x1.append(item[0]['stacks'][0])
-            x2.append(item[0]['stacks'][1])
-            x3.append(item[0]['stacks'][2])
-            x4.append(item[0]['stacks'][3])
-            x5.append(item[0]['stacks'][4])
-            x6.append(item[0]['stacks'][5])
-        pays = env.payouts#history[-1]#[-1]["payouts"]
-        player = np.argmin(pays)
-        wins[player] += 1
-        print(wins)
-        fig.add_trace(go.Scatter(x=xx, y=x1, mode='lines+markers', name='agent_1'))
-        fig.add_trace(go.Scatter(x=xx, y=x2, mode='lines+markers', name='agent_2'))
-        fig.add_trace(go.Scatter(x=xx, y=x3, mode='lines+markers', name='agent_3'))
-        fig.add_trace(go.Scatter(x=xx, y=x4, mode='lines+markers', name='agent_4'))
-        fig.add_trace(go.Scatter(x=xx, y=x5, mode='lines+markers', name='agent_5'))
-        fig.add_trace(go.Scatter(x=xx, y=x6, mode='lines+markers', name='agent_6'))
-        #fig.write_image(f'stask_{step}.png')
-        fig.show()
+            print('Episode: ', episode+1)
+            #print(env.render())
+            x1 = []
+            x2 = []
+            x3 = []
+            x4 = []
+            x5 = []
+            x6 = []
+            for item in env.history:
+                x1.append(item[0]['stacks'][0])
+                x2.append(item[0]['stacks'][1])
+                x3.append(item[0]['stacks'][2])
+                x4.append(item[0]['stacks'][3])
+                x5.append(item[0]['stacks'][4])
+                x6.append(item[0]['stacks'][5])
+            pays = env.payouts#history[-1]#[-1]["payouts"]
+            player = np.argmax(pays)
+            epoch_pots[player] += pays[player]
+
+
+        epoch_pots = epoch_pots / n_episodes
+        pots.append(epoch_pots.tolist())
+    pots = np.array(pots)
+    pots = pots.T
+    episodes = np.linspace(0, n_epochs, n_epochs)
+    print(episodes)
+    pots_fig = go.Figure(layout=go.Layout(
+        title=go.layout.Title(text="$/100")
+    ))
+    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[0:].tolist(), mode='lines+markers', name='agent_1'))
+    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[1:].tolist(), mode='lines+markers', name='agent_2'))
+    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[2:].tolist(), mode='lines+markers', name='agent_3'))
+    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[3:].tolist(), mode='lines+markers', name='agent_4'))
+    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[4:].tolist(), mode='lines+markers', name='agent_5'))
+    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[5:].tolist(), mode='lines+markers', name='agent_6'))
+    pots_fig.show()
 
 
 if __name__ == "__main__":
