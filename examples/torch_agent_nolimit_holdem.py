@@ -12,6 +12,9 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import Normalizer
 from breinforce import agents, envs, utils
 import plotly.graph_objects as go
+from tqdm import tqdm
+from time import sleep
+
 np.random.seed(1)
 pd.options.plotting.backend = "plotly"
 
@@ -52,7 +55,6 @@ def encode_data(df):
     new_merged_df.drop(numerical_columns, axis=1, inplace=True)
     new_norm_new_merged_df = pd.concat([new_merged_df, norm_new_merged_df], axis=1)
     return new_norm_new_merged_df, card_encoder, norm
-
 
 
 def encode_obs(obs):
@@ -132,17 +134,23 @@ class DQNetwork(nn.Module):
         super().__init__()
         self.fc1 = nn.Linear(in_features=n_features, out_features=24)
         self.fc2 = nn.Linear(in_features=24, out_features=32)
+        self.fc3 = nn.Linear(in_features=32, out_features=100)
+        self.fc4 = nn.Linear(in_features=100, out_features=100)
+        self.fc5 = nn.Linear(in_features=100, out_features=32)
         self.out = nn.Linear(in_features=32, out_features=6)
 
     def forward(self, x):
         x = x.flatten(start_dim=1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = F.relu(self.fc5(x))
         x = self.out(x)
         return x
 
 
-class DQAgent():
+class DQNAgent():
     def __init__(self, strategy, num_actions, device):
         self.current_step = 0
         self.strategy = strategy
@@ -160,58 +168,31 @@ class DQAgent():
             with torch.no_grad():
                 return policy_net(state).argmax(dim=1).to(self.device) # exploit
 
-'''
-class DQAgent():
-    def __init__(self, strategy, n_actions, device):
-        self.step = 0
-        self.strategy = strategy
-        self.n_actions = n_actions
-        self.device = device
 
-    def predict(self, state, policy_nn):
-        out = None
-        rate = self.strategy.rate(self.step)
-        self.step += 1
-
-        if rate > random.random():
-            action = random.randrange(self.n_actions) # explore
-            out = torch.tensor([action]).to(self.device)
-        else:
-            with torch.no_grad():
-                out = policy_nn(state).argmax(dim=1).to(self.device) # exploit
-        return out.numpy()[0] if out else 0
-'''
-
-
-def run():
+def run(agent, policy_nn, target_nn):
     batch_size = 256
     gamma = 0.999
-    eps_start = 1
-    eps_stop = 0.01
-    eps_decay = 0.001
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 100
-    n_episodes = 100
+    n_epochs = 10
+    n_episodes = 2
 
     utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    strategy = GreedyQStrategy(eps_start, eps_stop, eps_decay)
-    agent = DQAgent(strategy, 6, device)
     memory = SequentialMemory(memory_size)
 
-    policy_nn = DQNetwork(387).to(device)
-    target_nn = DQNetwork(387).to(device)
-    target_nn.load_state_dict(policy_nn.state_dict())
-    target_nn.eval()
     optimizer = optim.Adam(params=policy_nn.parameters(), lr=lr_decay)
 
-
-    pots = []
+    wrate = []
+    wins = np.array([0, 0, 0, 0, 0, 0], dtype="int")
+    total = np.array([0, 0, 0, 0, 0, 0], dtype="int")
+    print('Learning on Table 1 (DQN, MLP with 5 layers)')
+    pbar = tqdm(total=n_epochs * n_episodes)
     for epoch in range(n_epochs):
-        epoch_pots = np.array([0, 0, 0, 0, 0, 0])
+        epoch_wrate = np.array([0, 0, 0, 0, 0, 0])
         for episode in range(n_episodes):
+            pbar.update(1)
             env = gym.make('CustomSixPlayer-v0')
             probs = [0.0, 0.2, 0.2, 0.2, 0.2, 0.2]
             players = [agents.RandomAgent(probs)] * 5 + [agents.BaseAgent()]
@@ -259,7 +240,6 @@ def run():
             if episode % target_update == 0:
                 target_nn.load_state_dict(policy_nn.state_dict())
 
-            print('Episode: ', episode+1)
             #print(env.render())
             x1 = []
             x2 = []
@@ -274,28 +254,49 @@ def run():
                 x4.append(item[0]['stacks'][3])
                 x5.append(item[0]['stacks'][4])
                 x6.append(item[0]['stacks'][5])
-            pays = env.payouts#history[-1]#[-1]["payouts"]
+            pays = np.array(env.payouts, dtype="int")
             player = np.argmax(pays)
-            epoch_pots[player] += pays[player]
-
-
-        epoch_pots = epoch_pots / n_episodes
-        pots.append(epoch_pots.tolist())
-    pots = np.array(pots)
-    pots = pots.T
+            epoch_wrate += pays
+            wins[player] += 1
+            total += pays
+        epoch_wrate = np.round(epoch_wrate / n_episodes)
+        wrate.append(epoch_wrate.tolist())
+    pbar.close()
+    wrate = np.array(wrate)
+    wrate = wrate.T
     episodes = np.linspace(0, n_epochs, n_epochs)
-    print(episodes)
-    pots_fig = go.Figure(layout=go.Layout(
+    wrate_fig = go.Figure(layout=go.Layout(
         title=go.layout.Title(text="$/100")
     ))
-    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[0:].tolist(), mode='lines+markers', name='agent_1'))
-    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[1:].tolist(), mode='lines+markers', name='agent_2'))
-    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[2:].tolist(), mode='lines+markers', name='agent_3'))
-    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[3:].tolist(), mode='lines+markers', name='agent_4'))
-    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[4:].tolist(), mode='lines+markers', name='agent_5'))
-    pots_fig.add_trace(go.Scatter(x=episodes, y=pots[5:].tolist(), mode='lines+markers', name='agent_6'))
-    pots_fig.show()
+    wrate_fig.add_trace(go.Scatter(x=episodes, y=wrate[0:].tolist(), mode='lines+markers', name='agent_1'))
+    wrate_fig.add_trace(go.Scatter(x=episodes, y=wrate[1:].tolist(), mode='lines+markers', name='agent_2'))
+    wrate_fig.add_trace(go.Scatter(x=episodes, y=wrate[2:].tolist(), mode='lines+markers', name='agent_3'))
+    wrate_fig.add_trace(go.Scatter(x=episodes, y=wrate[3:].tolist(), mode='lines+markers', name='agent_4'))
+    wrate_fig.add_trace(go.Scatter(x=episodes, y=wrate[4:].tolist(), mode='lines+markers', name='agent_5'))
+    wrate_fig.add_trace(go.Scatter(x=episodes, y=wrate[5:].tolist(), mode='lines+markers', name='agent_6'))
+    wrate_fig.show(showlegend="false")
+
+    df_wrate = pd.DataFrame(data=wrate, dtype="int")
+    df_wrate["wins"] = pd.DataFrame(wins)
+    df_wrate["rate"] = df_wrate.mean(axis=1).astype("int")
+    df_wrate["total"] = pd.DataFrame(total)
+
+    # serialization
+    #agent.save("results")
+
+    print(df_wrate)
 
 
 if __name__ == "__main__":
-    run()
+    eps_start = 1
+    eps_stop = 0.01
+    eps_decay = 0.001
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    strategy = GreedyQStrategy(eps_start, eps_stop, eps_decay)
+    agent = DQNAgent(strategy, 6, device)
+    policy_nn = DQNetwork(387).to(device)
+    target_nn = DQNetwork(387).to(device)
+    target_nn.load_state_dict(policy_nn.state_dict())
+    #target_nn.eval()
+    print(policy_nn.state_dict())
+    run(agent, policy_nn, target_nn)
