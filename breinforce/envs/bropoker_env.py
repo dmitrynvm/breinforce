@@ -215,7 +215,6 @@ def perform_blinds_(state):
     state.stacks -= actions
 
 
-
 class BropokerEnv(gym.Env):
     def __init__(self, config) -> None:
 

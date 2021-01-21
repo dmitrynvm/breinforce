@@ -73,12 +73,12 @@ class HandsView(BaseView):
         if turn:
             out += f'*** TURN CARDS *** {turn_cards}\n'
             out += self.fmt(turn)
-        
+
         river = self.select(3)
         if river:
             out += f'*** RIVER CARDS *** {river_cards}\n'
             out += self.fmt(river)
-        
+
         # Summary
         out += '*** SUMMARY ***\n'
         out += f'Total pot ${pot} | rake ${int(pot * rake)} \n'
@@ -86,7 +86,7 @@ class HandsView(BaseView):
         out += self.summary(state)
 
         self.string = out
-        return self
+        return self.string
 
     def __str__(self):
         '''String representation of the view

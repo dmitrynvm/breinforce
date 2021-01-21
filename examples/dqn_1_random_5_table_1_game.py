@@ -177,8 +177,8 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 100
-    n_episodes = 100
+    n_epochs = 10
+    n_episodes = 10
 
     utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -186,6 +186,7 @@ def learn(agent, policy_nn, target_nn):
 
     optimizer = optim.Adam(params=policy_nn.parameters(), lr=lr_decay)
 
+    hist = ''
     wrate = []
     wins = np.array([0, 0, 0, 0, 0, 0], dtype="int")
     total = np.array([0, 0, 0, 0, 0, 0], dtype="int")
@@ -242,7 +243,7 @@ def learn(agent, policy_nn, target_nn):
             if episode % target_update == 0:
                 target_nn.load_state_dict(policy_nn.state_dict())
 
-            #print(env.render())
+            hist += env.render() + "\n\n"
             x1 = []
             x2 = []
             x3 = []
@@ -279,7 +280,7 @@ def learn(agent, policy_nn, target_nn):
     wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[3:].values[0], mode='lines+markers', name='agent_4'))
     wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[4:].values[0], mode='lines+markers', name='agent_5'))
     wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[5:].values[0], mode='lines+markers', name='agent_6'))
-    wrate_fig.write_image("results/table_1/learning.png", width=1024, height=768)
+    wrate_fig.write_image("results/table_1_learning.png", width=1024, height=768)
     #wrate_fig.show()
     print(df_wrate[5:].values[0])
 
@@ -288,8 +289,13 @@ def learn(agent, policy_nn, target_nn):
     df_wrate["total"] = pd.DataFrame(total)
     out = tabulate(df_wrate, tablefmt="grid", headers="keys")
     print(out)
-    f = open("results/table_1/learning.txt", "w")
+    f = open("results/table_1_learning.txt", "w")
     f.write(out)
+    f.close()
+
+    f_hist = open("results/table_1_history.txt", "w")
+    f_hist.write(hist)
+    f_hist.close()
 
     print(df_wrate)
 
@@ -306,7 +312,6 @@ if __name__ == "__main__":
     target_nn.load_state_dict(policy_nn.state_dict())
     #target_nn.eval()
     os.makedirs('results', exist_ok=True)
-    os.makedirs('results/table_1', exist_ok=True)
-    torch.save(target_nn.state_dict(), 'results/table_1/policy_nn_table_1.pt')
-    torch.save(target_nn.state_dict(), 'results/table_1/targeet_nn_table_1.pt')
+    torch.save(target_nn.state_dict(), 'results/table_1_policy_nn_table_1.pt')
+    torch.save(target_nn.state_dict(), 'results/table_1_targeet_nn_table_1.pt')
     learn(agent, policy_nn, target_nn)
