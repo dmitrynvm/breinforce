@@ -1,6 +1,9 @@
 install:
 	@pip install -e .
 
+server:
+	@python3 breinforce/api/server.py
+
 test:
 	@pytest
 

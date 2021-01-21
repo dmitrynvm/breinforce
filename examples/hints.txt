@@ -1,0 +1,13 @@
+[api] [16 cpu, tesla 16 gb]
+{
+    "hole_cards": ["3h", "5d"],
+    "valid_action": [0, 1, ..., stack[player]]
+    "call" "min_raise": "100" "max_raise":
+    "legal_actions": ["0", "call", "raise_1", ..., "raise_n"]
+}
+
+return
+{
+    action: "raise", ["call", "check", "raise", "allin", "fold"]
+    amount: 3
+}

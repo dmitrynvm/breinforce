@@ -177,7 +177,7 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 1000
+    n_epochs = 100
     n_episodes = 100
 
     utils.configure()
@@ -280,7 +280,7 @@ def learn(agent, policy_nn, target_nn):
     wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[4:].values[0], mode='lines+markers', name='agent_5'))
     wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[5:].values[0], mode='lines+markers', name='agent_6'))
     wrate_fig.write_image("results/table_1/learning.png", width=1024, height=768)
-    wrate_fig.show()
+    #wrate_fig.show()
     print(df_wrate[5:].values[0])
 
     df_wrate["wins"] = pd.DataFrame(wins)
