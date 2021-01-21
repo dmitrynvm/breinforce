@@ -1,0 +1,36 @@
+PokerStars Hand #000912372945:  Hold"em No Limit ($0.01/$0.02 EUR) - 2020/07/01 17:00:01 MSK [2020/07/01 11:00:01 ET]
+Table "hex_hash" 6-max Seat #3 is the button
+Seat 1: faracia ($0.56 in chips)
+Seat 2: DICQ_Domy34 ($0.55 in chips)
+Seat 3: michigan st12 ($2.23 in chips)
+Seat 4: BWKF_giannifre ($1.95 in chips)
+Seat 5: ariete23 ($2.00 in chips)
+BWKF_giannifre: posts small blind $0.01
+ariete23: posts big blind $0.02
+DICQ_Domy34: posts big blind $0.02
+*** HOLE CARDS ***
+Dealt to ariete23 [Ad 5d]
+faracia: calls $0.02
+DICQ_Domy34: checks
+michigan st12: folds
+BWKF_giannifre: calls $0.01
+ariete23: raises $0.10 to $0.12
+faracia: folds
+DICQ_Domy34: calls $0.10
+BWKF_giannifre: calls $0.10
+*** FLOP *** [Th Ac 3c]
+BWKF_giannifre: checks
+ariete23: bets $0.26
+DICQ_Domy34: raises $0.17 to $0.43
+BWKF_giannifre: folds
+ariete23: calls $0.17
+DICQ_Domy34: shows [Qc 9c]
+ariete23: shows [Ad 5d]
+*** TURN *** [Th Ac 3c] [7d]
+*** RIVER *** [Th Ac 3c 7d] [9h]
+ariete23: shows [Ad 5d]
+ariete23 collected $1.18 from pot
+*** SUMMARY ***
+Total pot $1.24 | Rake $0.06
+Board [ Th Ac 3c 7d 9h ]
+

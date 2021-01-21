@@ -30,9 +30,9 @@ class HandsView(BaseView):
         rake = state['rake']
         hole_cards = state['hole_cards']
         board_cards = state['board_cards']
-        flop_cards = repr(board_cards[:3])
-        turn_cards = repr(board_cards[:3]) + '[' + repr(board_cards[3]) + ']'
-        river_cards = repr(board_cards[:4]) + '[' + repr(board_cards[4]) + ']'
+        flop_cards = repr(board_cards[:3]) if len(board_cards) > 2 else None
+        turn_cards = repr(board_cards[:3]) + '[' + repr(board_cards[3]) + ']' if len(board_cards) > 3 else None
+        river_cards = repr(board_cards[:4]) + '[' + repr(board_cards[4]) + ']' if len(board_cards) > 4 else None
         self.payouts = state['payouts']
 
         # Header

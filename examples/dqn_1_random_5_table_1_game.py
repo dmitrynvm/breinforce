@@ -177,8 +177,8 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 10
-    n_episodes = 10
+    n_epochs = 300
+    n_episodes = 100
 
     utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
