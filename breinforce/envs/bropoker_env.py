@@ -5,7 +5,7 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from breinforce.agents import BaseAgent
 from breinforce.games.bropoker import Deck, Judge
-from breinforce.views import AsciiView
+from breinforce.views import AsciiView, HandsView
 
 
 def clean(legal_actions, action) -> int:
@@ -255,7 +255,8 @@ class BropokerEnv(gym.Env):
         self.pot = 0
         self.alive = np.zeros(self.n_players, dtype=np.uint8)
         self.contribs = np.zeros(self.n_players, dtype=np.int32)
-        
+        self.payouts = []
+
         self.acted = np.zeros(self.n_players, dtype=np.uint8)
         self.commits = np.zeros(self.n_players, dtype=np.int32)
         self.folded = [self.n_streets for i in range(self.n_players)]
@@ -378,6 +379,7 @@ class BropokerEnv(gym.Env):
 
         obs = get_observation(self)
         payouts = get_payouts(self)
+        self.payouts = payouts
         done = get_done(self)
         info = None
         if all(done):
@@ -386,8 +388,12 @@ class BropokerEnv(gym.Env):
         obs["hole_cards"] = obs["hole_cards"][obs["player"]]
         return obs, payouts, done, info
 
-    def render(self, mode="ascii"):
-        return "ascii"
+    def render(self, mode="hands"):
+        out = None
+        hands_view = HandsView(self)
+        if mode == "hands":
+            out = hands_view.render()
+        return out
 
     @property
     def state(self):

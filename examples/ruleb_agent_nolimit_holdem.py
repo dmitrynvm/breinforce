@@ -4,7 +4,6 @@ from breinforce import agents, envs, views, utils
 
 utils.configure()
 env = gym.make("CustomSixPlayer-v0")
-hh = views.HandsView(env)
 
 probs = [
     0.1,  # fold
@@ -24,6 +23,6 @@ while True:
     action = env.act(obs)
     obs, rewards, done, info = env.step(action)
     if all(done):
-        break
+        brea
 
-print(hh.render())
+print(env.render())

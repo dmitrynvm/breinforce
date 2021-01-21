@@ -11,9 +11,10 @@ class RandomAgent(BaseAgent):
 
     def act(self, obs):
         legal_actions = obs['legal_actions']
-        # indices = list(range(len(legal_actions)))
-        # index = random.choice(indices)
-        # return list(legal_actions.values())[index]
+        indices = list(range(len(legal_actions)))
+        index = random.choice(indices)
+        out = list(legal_actions.values())[index]
+        '''
         if obs['street'] == 0:
             out = legal_actions['call']
         elif obs['street'] in [1, 2]:
@@ -29,4 +30,5 @@ class RandomAgent(BaseAgent):
             else:
                 out = 0
         # print(legal_actions, out)
+        '''
         return out
