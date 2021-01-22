@@ -177,7 +177,7 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 10
+    n_epochs = 100
     n_episodes = 100
 
     utils.configure()
@@ -200,44 +200,40 @@ def learn(agent, policy_nn, target_nn):
             pbar.update(1)
             env = gym.make('CustomSixPlayer-v0')
             probs = [0.0, 0.2, 0.2, 0.2, 0.2, 0.2]
-            players = [agents.RandomAgent(probs)] * 5 + [agents.BaseAgent()]
+            players = [agents.BaseAgent()] * 6
             env.register(players)
             obs = env.reset()
             step = 0
 
             while True:
                 step += 1
-                if obs['player'] < 5:
-                    action = env.act(obs)
-                    obs, rewards, done, info = env.step(action)
-                    enc_obs = encode_obs(obs)
+                enc_obs = encode_obs(obs)
+                action = agent.predict(enc_obs.float(), policy_nn)
+                player_id = obs['player']
+                action_type = action#.numpy()[0]
+                if action_type == 0:
+                    action_sum = -1
+                elif action_type == 5:
+                    action_sum = obs['stacks'][obs['player']]
+                elif action_type == 1:
+                    action_sum = obs['call']
                 else:
-                    action = agent.predict(enc_obs.float(), policy_nn)
-                    player_id = obs['player']
-                    action_type = action#.numpy()[0]
-                    if action_type == 0:
-                        action_sum = -1
-                    elif action_type == 5:
-                        action_sum = obs['stacks'][obs['player']]
-                    elif action_type == 1:
-                        action_sum = obs['call']
-                    else:
-                        action_sum = 100#fracs[action_type] * obs['pot']
+                    action_sum = 100#fracs[action_type] * obs['pot']
 
-                    obs, rewards, done, info = env.step(action_sum)
-                    reward = torch.from_numpy(np.array(rewards[player_id]))
-                    next_enc_obs = encode_obs(obs)
-                    memory.add(Experience(enc_obs.float(), action, next_enc_obs.float(), reward))
+                obs, rewards, done, info = env.step(action_sum)
+                reward = torch.from_numpy(np.array(rewards[player_id]))
+                next_enc_obs = encode_obs(obs)
+                memory.add(Experience(enc_obs.float(), action, next_enc_obs.float(), reward))
 
-                    if memory.ready(batch_size):
-                        states, actions, rewards, next_states = memory.sample(batch_size)
-                        current_q_values = get_current(policy_nn, states, actions)
-                        next_q_values = get_next(target_nn, next_states)
-                        target_q_values = (next_q_values * gamma) + rewards
-                        loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
-                        optimizer.zero_grad()
-                        loss.backward()
-                        optimizer.step()
+                if memory.ready(batch_size):
+                    states, actions, rewards, next_states = memory.sample(batch_size)
+                    current_q_values = get_current(policy_nn, states, actions)
+                    next_q_values = get_next(target_nn, next_states)
+                    target_q_values = (next_q_values * gamma) + rewards
+                    loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
 
                 if all(done):
                     break
@@ -338,6 +334,6 @@ if __name__ == "__main__":
     target_nn.load_state_dict(policy_nn.state_dict())
     #target_nn.eval()
     os.makedirs('results', exist_ok=True)
-    torch.save(target_nn.state_dict(), 'results/table_1_policy_nn_table_1.pt')
-    torch.save(target_nn.state_dict(), 'results/table_1_targeet_nn_table_1.pt')
+    torch.save(policy_nn.state_dict(), 'results/table_1_policy_nn_table_1.pt')
+    torch.save(target_nn.state_dict(), 'results/table_1_target_nn_table_1.pt')
     learn(agent, policy_nn, target_nn)

@@ -37,7 +37,7 @@ class HandsView(BaseView):
 
         # Header
         out += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
-            f'(${sb}/${bb}/${st} chips) - {date} MSK\n'# [{date2} ET]\n'
+            f'(${sb}/${bb}/${st} chips) - {date} ET\n'# [{date2} ET]\n'
         # Table
         out += f'Table \'{table_name}\' {n_players}-max ' \
             f'Seat #{button + 1} is the button\n'
@@ -66,17 +66,17 @@ class HandsView(BaseView):
 
         flop = self.select(1)
         if flop:
-            out += f'*** FLOP CARDS *** {flop_cards}\n'
+            out += f'*** FLOP *** {flop_cards}\n'
             out += self.fmt(flop)
 
         turn = self.select(2)
         if turn:
-            out += f'*** TURN CARDS *** {turn_cards}\n'
+            out += f'*** TURN *** {turn_cards}\n'
             out += self.fmt(turn)
 
         river = self.select(3)
         if river:
-            out += f'*** RIVER CARDS *** {river_cards}\n'
+            out += f'*** RIVER *** {river_cards}\n'
             out += self.fmt(river)
 
         # Summary
@@ -110,7 +110,9 @@ class HandsView(BaseView):
             out += f"Seat {player+1}: {results[player]['name']} "
             # role
             fold = results[player]['fold']
-            out += f"({results[player]['role']}) "
+            role = results[player]['role']
+            if role:
+                out += f"({role}) "
             if fold < state['street']:
                 out += "folded before flop"
             elif results[player]['won']:

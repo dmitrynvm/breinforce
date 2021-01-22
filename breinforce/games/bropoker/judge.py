@@ -73,9 +73,7 @@ class Judge(object):
     def __repr__(self) -> str:
         return f"Judge ({id(self)}): {str(self)}"
 
-    def evaluate(
-        self, hole_cards: List[Card], board_cards: List[Card]
-    ) -> int:
+    def evaluate(self, hole_cards: List[Card], board_cards: List[Card]) -> int:
         """Evaluates the hand rank of a poker hand from a list of hole
         and a list of board cards. Empty hole and board cards
         are supported as well as requiring a minimum number of hole

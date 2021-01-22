@@ -121,7 +121,7 @@ def get_observation(state) -> Dict:
         "min_raise": get_min_raise(state),
         "legal_actions": get_legal_actions_dict(state),
         "board_cards": board_cards,
-        "hole_cards": hole_cards,
+        "hole_cards": hole_cards[state.player],
         "alive": state.alive,
         "stacks": state.stacks,
         "commits": state.commits
@@ -239,7 +239,7 @@ class BropokerEnv(gym.Env):
         self.big_blind = config["blinds"][1] if self.n_players > 2 else None
         self.straddle = config["blinds"][2] if self.n_players > 3 else None
         self.hand_id = "hand_1"
-        self.date = datetime.now().strftime("%b/%d/%Y %H:%M:%S")
+        self.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         self.table_name = "table_1"
         self.player_ids = ["agent_" + str(i+1) for i in range(self.n_players)]
         self.hole_cards = []
@@ -384,7 +384,7 @@ class BropokerEnv(gym.Env):
         if all(done):
             self.player = -1
             obs["player"] = -1
-        obs["hole_cards"] = obs["hole_cards"][obs["player"]]
+        obs["hole_cards"] = obs["hole_cards"]#[obs["player"]]
         return obs, payouts, done, info
 
     def render(self, mode="hands"):

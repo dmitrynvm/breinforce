@@ -61,6 +61,7 @@ class Card:
 
         rank_char = string[0].upper()
         suit_char = string[1].upper()
+
         try:
             rank_int = Card.RANKS_TO_INTS[rank_char]
         except KeyError:
@@ -91,7 +92,7 @@ class Card:
     def __str__(self) -> str:
         suit_int = (self.value >> 12) & 0xF
         rank_int = (self.value >> 8) & 0xF
-        suit = Card.PRT_SUITS[suit_int]
+        suit = Card.RAW_SUITS[suit_int]
         rank = Card.STR_RANKS[rank_int]
         return f"{rank}{suit}"
 
