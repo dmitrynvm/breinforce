@@ -177,7 +177,7 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 10
+    n_epochs = 300
     n_episodes = 100
 
     utils.configure()
@@ -338,6 +338,6 @@ if __name__ == "__main__":
     target_nn.load_state_dict(policy_nn.state_dict())
     #target_nn.eval()
     os.makedirs('results', exist_ok=True)
-    torch.save(target_nn.state_dict(), 'results/table_1_policy_nn_table_1.pt')
-    torch.save(target_nn.state_dict(), 'results/table_1_targeet_nn_table_1.pt')
+    torch.save(policy_nn.state_dict(), 'results/table_1_policy_nn_table_1.pt')
+    torch.save(target_nn.state_dict(), 'results/table_1_target_nn_table_1.pt')
     learn(agent, policy_nn, target_nn)
