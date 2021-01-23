@@ -131,6 +131,7 @@ def get_observation(state) -> Dict:
         "stacks": state.stacks,
         "commits": state.commits
     }
+    # print(obs["call"], obs["min_raise"], obs["max_raise"])
     return obs
 
 def evaluate(state) -> np.ndarray:
@@ -325,7 +326,7 @@ class BropokerEnv(gym.Env):
         self.acted.fill(0)
         if self.n_players > 2:
             move_(self)
-        perform_antes_(self)
+        # perform_antes_(self)
         perform_blinds_(self)
         move_(self)
         move_(self)
@@ -338,6 +339,7 @@ class BropokerEnv(gym.Env):
         action = clean(legal_actions, action)
         action_type = get_action_type(self, action)
         call = get_call(self)
+        # print(action, get_call(self), get_min_raise(self), get_max_raise(self), 'commits', self.commits)
         info = {
             "action_type": action_type,
             "legal_actions": legal_actions,
@@ -357,8 +359,8 @@ class BropokerEnv(gym.Env):
             self.alive[self.player] = 0
             self.folded[self.player] = self.street
 
-        perform_action_(self, action)
         self.history.append((self.state, self.player, action, info))
+        perform_action_(self, action)
         move_(self)
 
         # if all agreed go to next street

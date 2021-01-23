@@ -37,7 +37,7 @@ class HandsView(BaseView):
 
         # Header
         out += f'PokerStars Hand #{hand_id}: Hold\'em No Limit' \
-            f'(${sb}/${bb}/${st} chips) - {date} ET\n'# [{date2} ET]\n'
+            f'(${sb}/${bb}/${st} chips) - {date} MSK\n'# [{date2} ET]\n'
         # Table
         out += f'Table \'{table_name}\' {n_players}-max ' \
             f'Seat #{button + 1} is the button\n'
@@ -48,12 +48,12 @@ class HandsView(BaseView):
         # Preflop
         #out += self.__subhistory(self.env.history, 0)
         sb_id = player_ids[button + 1]
-        out += f'{sb_id} posts small blind ${sb}\n'
+        out += f'{sb_id}: posts small blind ${sb}\n'
         bb_id = player_ids[button + 2]
-        out += f'{bb_id} posts big blind ${bb}\n'
+        out += f'{bb_id}: posts big blind ${bb}\n'
         if n_players > 3:
             st_id = player_ids[button + 3]
-            out += f'{st_id} posts straddle ${st}\n'
+            out += f'{st_id}: posts straddle ${st}\n'
         # Dealt
         out += '*** HOLE CARDS ***\n'
         for player in range(n_players):
@@ -166,6 +166,7 @@ class HandsView(BaseView):
         for step, item in enumerate(history):
             state, player, action, info = item
             folded = state['folded']
+            street = state['street']
             if folded[player] >= state['street']:
                 out += f"agent_{player+1}: "
                 if info["action_type"] == "fold":
@@ -173,12 +174,15 @@ class HandsView(BaseView):
                 elif info["action_type"] == "check":
                     out += "checks"
                 elif info["action_type"] == "call":
-                    out += f"calls ${action} chips"
+                    out += f"calls ${action}"
                 elif info["action_type"] in ["raise", "all_in"]:
                     if betted:
-                        out += f"raises ${action} to ${info['call'] + action}"
+                        out += f"raises ${action - info['call']} to ${action}"
                     else:
-                        out += f"bets ${action}"
+                        if street:
+                            out += f"bets ${action}"
+                        else:
+                            out += f"raises ${action} to ${info['call'] + action}"
                         betted = True
                 else:
                     out += f"bets {action}"

@@ -121,7 +121,7 @@ def get_next(target_nn, next_states):
     return values
 
 
-class GreedyQStrategy():
+class GreedyStrategy():
     def __init__(self, start, stop, decay):
         self.start = start
         self.stop = stop
@@ -177,8 +177,8 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 300
-    n_episodes = 100
+    n_epochs = 3#00
+    n_episodes = 10#0
 
     utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -331,7 +331,7 @@ if __name__ == "__main__":
     eps_stop = 0.01
     eps_decay = 0.001
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    strategy = GreedyQStrategy(eps_start, eps_stop, eps_decay)
+    strategy = GreedyStrategy(eps_start, eps_stop, eps_decay)
     agent = DQNAgent(strategy, 6, device)
     policy_nn = DQNetwork(387).to(device)
     target_nn = DQNetwork(387).to(device)
