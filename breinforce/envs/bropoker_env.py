@@ -2,10 +2,15 @@
 from datetime import datetime
 import gym
 import numpy as np
+import uuid 
 from typing import Dict, List, Optional, Tuple
 from breinforce.agents import BaseAgent
 from breinforce.games.bropoker import Deck, Judge
 from breinforce.views import AsciiView, HandsView
+
+
+def gen_uuid():
+    return str(uuid.uuid4().int)[:11]
 
 
 def clean(legal_actions, action) -> int:
@@ -238,9 +243,9 @@ class BropokerEnv(gym.Env):
         self.small_blind = config["blinds"][0]
         self.big_blind = config["blinds"][1] if self.n_players > 2 else None
         self.straddle = config["blinds"][2] if self.n_players > 3 else None
-        self.hand_id = "hand_1"
+        self.hand_id = gen_uuid()
         self.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-        self.table_name = "table_1"
+        self.table_name = "Table_1"
         self.player_ids = ["agent_" + str(i+1) for i in range(self.n_players)]
         self.hole_cards = []
         self.board_cards = []

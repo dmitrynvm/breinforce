@@ -30,9 +30,9 @@ class HandsView(BaseView):
         rake = state['rake']
         hole_cards = state['hole_cards']
         board_cards = state['board_cards']
-        flop_cards = repr(board_cards[:3]) if len(board_cards) > 2 else None
-        turn_cards = repr(board_cards[:3]) + '[' + repr(board_cards[3]) + ']' if len(board_cards) > 3 else None
-        river_cards = repr(board_cards[:4]) + '[' + repr(board_cards[4]) + ']' if len(board_cards) > 4 else None
+        flop_cards = repr(board_cards[:3]).replace(",", '') if len(board_cards) > 2 else None
+        turn_cards = repr(board_cards[:3]).replace(",", '') + '[' + repr(board_cards[3]) + ']' if len(board_cards) > 3 else None
+        river_cards = repr(board_cards[:4]).replace(",", '') + '[' + repr(board_cards[4]).replace(",", '') + ']' if len(board_cards) > 4 else None
         self.payouts = state['payouts']
 
         # Header
@@ -58,7 +58,7 @@ class HandsView(BaseView):
         out += '*** HOLE CARDS ***\n'
         for player in range(n_players):
             player_id = player_ids[player]
-            player_cards = repr(hole_cards[player])
+            player_cards = repr(hole_cards[player]).replace(",", '')
             out += f'Dealt to {player_id} {player_cards}\n'
 
         preflop = self.select(0)
@@ -82,7 +82,8 @@ class HandsView(BaseView):
         # Summary
         out += '*** SUMMARY ***\n'
         out += f'Total pot ${pot} | rake ${int(pot * rake)} \n'
-        out += f'Board {board_cards}\n'
+        cards = repr(board_cards).replace(",", '')
+        out += f'Board {cards}\n'
         out += self.summary(state)
 
         self.string = out
@@ -114,7 +115,7 @@ class HandsView(BaseView):
             if role:
                 out += f"({role}) "
             if fold < state['street']:
-                out += "folded before flop"
+                out += "folded before Flop"
             elif results[player]['won']:
                 out += f"showed {results[player]['hole']} "
                 out += f"and won ${results[player]['won']} "
@@ -137,7 +138,7 @@ class HandsView(BaseView):
                 'name': None,
                 'role': None,
                 'won': None,
-                'hole': hole_cards[player],
+                'hole': repr(hole_cards[player]).replace(",", ''),
                 'rank': None,
                 'fold': None
             }
@@ -161,21 +162,24 @@ class HandsView(BaseView):
 
     def fmt(self, history):
         out = ''
-        for item in history:
+        betted = False
+        for step, item in enumerate(history):
             state, player, action, info = item
             folded = state['folded']
             if folded[player] >= state['street']:
-                out += f"Player{player+1} "
+                out += f"agent_{player+1}: "
                 if info["action_type"] == "fold":
                     out += "folds"
                 elif info["action_type"] == "check":
                     out += "checks"
                 elif info["action_type"] == "call":
-                    out += f"called ${action} chips"
-                elif info["action_type"] == "raise":
-                    out += f"raised from ${info['call']} to ${action}"
-                elif info["action_type"] == "all_in":
-                    out += f"pushed from ${info['call']} to ${action}"
+                    out += f"calls ${action} chips"
+                elif info["action_type"] in ["raise", "all_in"]:
+                    if betted:
+                        out += f"raises ${action} to ${info['call'] + action}"
+                    else:
+                        out += f"bets ${action}"
+                        betted = True
                 else:
                     out += f"bets {action}"
                 out += '\n'
