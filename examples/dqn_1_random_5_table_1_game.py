@@ -177,25 +177,23 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 3#00
-    n_episodes = 10#0
+    n_epochs = 1000
+    n_episodes = 100
 
     utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     memory = SequentialMemory(memory_size)
-
     optimizer = optim.Adam(params=policy_nn.parameters(), lr=lr_decay)
 
     hist = ''
     wrate = []
-    bbpn = []
+    stacks = []
     wins = np.array([0, 0, 0, 0, 0, 0], dtype="int")
     total = np.array([0, 0, 0, 0, 0, 0], dtype="int")
     print('Learning on Table 1 (DQN, MLP with 5 layers)')
     pbar = tqdm(total=n_epochs * n_episodes)
     for epoch in range(n_epochs):
         epoch_wrate = np.array([0, 0, 0, 0, 0, 0])
-        epoch_bbpn = np.array([0, 0, 0, 0, 0, 0], dtype="float")
         for episode in range(n_episodes):
             pbar.update(1)
             env = gym.make('CustomSixPlayer-v0')
@@ -246,84 +244,37 @@ def learn(agent, policy_nn, target_nn):
                 target_nn.load_state_dict(policy_nn.state_dict())
 
             hist += env.render() + "\n\n"
-            x1 = []
-            x2 = []
-            x3 = []
-            x4 = []
-            x5 = []
-            x6 = []
             for item in env.history:
-                x1.append(item[0]['stacks'][0])
-                x2.append(item[0]['stacks'][1])
-                x3.append(item[0]['stacks'][2])
-                x4.append(item[0]['stacks'][3])
-                x5.append(item[0]['stacks'][4])
-                x6.append(item[0]['stacks'][5])
+                state, action, reward, info = item
+                stacks.append(state['stacks'])
             pays = np.array(env.payouts, dtype="int")
             player = np.argmax(pays)
             epoch_wrate += pays
-            epoch_bbpn += pays / env.big_blind
             wins[player] += 1
             total += pays
         epoch_wrate = np.round(epoch_wrate / n_episodes)
         wrate.append(epoch_wrate.tolist())
-        epoch_bbpn = np.round(epoch_bbpn / n_episodes)
-        bbpn.append(epoch_bbpn.tolist())
     pbar.close()
-    wrate = np.array(wrate)
-    wrate = wrate.T
-    bbpn = np.array(bbpn)
-    bbpn = bbpn.T
-    print(bbpn)
-    episodes = np.linspace(0, n_epochs, n_epochs)
 
+    wrate = np.array(wrate).T
     df_wrate = pd.DataFrame(data=wrate, dtype="int")
-    wrate_fig = go.Figure(layout=go.Layout(
-        title=go.layout.Title(text="$/100")
-    ))
-    wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[0:].values[0], mode='lines+markers', name='agent_1'))
-    wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[1:].values[0], mode='lines+markers', name='agent_2'))
-    wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[2:].values[0], mode='lines+markers', name='agent_3'))
-    wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[3:].values[0], mode='lines+markers', name='agent_4'))
-    wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[4:].values[0], mode='lines+markers', name='agent_5'))
-    wrate_fig.add_trace(go.Scatter(x=episodes, y=df_wrate[5:].values[0], mode='lines+markers', name='agent_6'))
-    wrate_fig.write_image("results/table_1_cpne.png", width=1024, height=768)
-    #wrate_fig.show()
-
     df_wrate["wins"] = pd.DataFrame(wins)
-    df_wrate["$/100"] = df_wrate.mean(axis=1).astype("int")
+    df_wrate["$/100"] = pd.DataFrame(total / (n_epochs * n_episodes)).round()
+    df_wrate["bb/100"] = pd.DataFrame(total / (n_epochs * n_episodes * env.big_blind)).round()
     df_wrate["total"] = pd.DataFrame(total)
+    df_wrate.to_csv("results/wrates.csv")
 
-    str_cpne = tabulate(df_wrate, tablefmt="grid", headers="keys")
-    f_cpne = open("results/table_1_cpne.txt", "w")
-    f_cpne.write(str_cpne)
-    f_cpne.close()
+    with open("results/wrates.txt", "w") as f:
+        f.write(tabulate(df_wrate, tablefmt="grid", headers="keys"))
 
-    df_bbpn = pd.DataFrame(data=bbpn, dtype="int")
-    fig_bbpn = go.Figure(layout=go.Layout(
-        title=go.layout.Title(text="bb/100")
-    ))
-    fig_bbpn.add_trace(go.Scatter(x=episodes, y=df_bbpn[0:].values[0], mode='lines+markers', name='agent_1'))
-    fig_bbpn.add_trace(go.Scatter(x=episodes, y=df_bbpn[1:].values[0], mode='lines+markers', name='agent_2'))
-    fig_bbpn.add_trace(go.Scatter(x=episodes, y=df_bbpn[2:].values[0], mode='lines+markers', name='agent_3'))
-    fig_bbpn.add_trace(go.Scatter(x=episodes, y=df_bbpn[3:].values[0], mode='lines+markers', name='agent_4'))
-    fig_bbpn.add_trace(go.Scatter(x=episodes, y=df_bbpn[4:].values[0], mode='lines+markers', name='agent_5'))
-    fig_bbpn.add_trace(go.Scatter(x=episodes, y=df_bbpn[5:].values[0], mode='lines+markers', name='agent_6'))
-    fig_bbpn.write_image("results/table_1_bbpn.png", width=1024, height=768)
-    #wrate_fig.show()
+    df_stacks = pd.DataFrame(data=np.array(stacks).T, dtype="int")
+    df_stacks.to_csv("results/stacks.csv")
 
-    df_bbpn["wins"] = pd.DataFrame(wins)
-    df_bbpn["bb/100"] = df_bbpn.mean(axis=1).astype("int")
-    df_bbpn["total"] = pd.DataFrame(total)
-    str_bpne = tabulate(df_bbpn, tablefmt="grid", headers="keys")
+    with open("results/stacks.txt", "w") as f:
+        f.write(tabulate(df_stacks, tablefmt="grid", headers="keys"))
 
-    f_bbpn = open("results/table_1_bpne.txt", "w")
-    f_bbpn.write(str_bpne)
-    f_bbpn.close()
-
-    f_hist = open("results/table_1_history.txt", "w")
-    f_hist.write(hist)
-    f_hist.close()
+    with open("results/history.txt", "w") as f:
+        f.write(hist)
 
 
 if __name__ == "__main__":
@@ -336,8 +287,7 @@ if __name__ == "__main__":
     policy_nn = DQNetwork(387).to(device)
     target_nn = DQNetwork(387).to(device)
     target_nn.load_state_dict(policy_nn.state_dict())
-    #target_nn.eval()
     os.makedirs('results', exist_ok=True)
-    torch.save(policy_nn.state_dict(), 'results/table_1_policy_nn_table_1.pt')
-    torch.save(target_nn.state_dict(), 'results/table_1_target_nn_table_1.pt')
+    torch.save(policy_nn.state_dict(), 'results/policy_nn.pt')
+    torch.save(target_nn.state_dict(), 'results/target_nn.pt')
     learn(agent, policy_nn, target_nn)
