@@ -2,7 +2,8 @@
 from datetime import datetime
 import gym
 import numpy as np
-import uuid 
+import uuid
+from collections import namedtuple
 from typing import Dict, List, Optional, Tuple
 from breinforce.agents import BaseAgent
 from breinforce.games.bropoker import Deck, Judge
@@ -68,14 +69,13 @@ def get_done(state) -> List[bool]:
     return np.logical_not(state.alive)
 
 
-def get_all_agreed(state) -> bool:
-    if not all(state.acted):
-        return False
-    return all(
-        (state.commits == state.commits.max())
-        | (state.stacks == 0)
-        | np.logical_not(state.alive)
-    )
+def get_agree(state) -> bool:
+    max_commit = state.commits.max()
+    acted = state.acted == 1
+    empty = state.stacks == 0
+    committed = state.commits == max_commit
+    alived = np.logical_not(state.alive)
+    return acted + empty + committed + alived
 
 
 def get_legal_actions(state):
@@ -364,7 +364,7 @@ class BropokerEnv(gym.Env):
         move_(self)
 
         # if all agreed go to next street
-        if get_all_agreed(self):
+        if all(get_agree(self)):
             self.player = self.button
             move_(self)
             # if at most 1 player alive and not all in turn up all
