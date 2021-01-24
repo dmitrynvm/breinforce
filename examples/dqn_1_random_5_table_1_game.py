@@ -77,15 +77,6 @@ def encode_obs(obs):
     return torch_tensor
 
 
-def extract(experiences):
-    batch = Experience(*zip(*experiences))
-    t1 = torch.cat(batch.state)
-    t2 = torch.cat(batch.action)
-    t3 = torch.stack(batch.reward, axis=0)
-    t4 = torch.cat(batch.next_state)
-    return (t1, t2, t3, t4)
-
-
 class SequentialMemory():
     def __init__(self, size):
         self.size = size
@@ -100,7 +91,14 @@ class SequentialMemory():
         self.curr += 1
 
     def sample(self, n_items, extract=extract):
-        return extract(random.sample(self.items, n_items))
+        experiences = random.sample(self.items, n_items)
+
+        batch = Experience(*zip(*experiences))
+        t1 = torch.cat(batch.state)
+        t2 = torch.cat(batch.action)
+        t3 = torch.stack(batch.reward, axis=0)
+        t4 = torch.cat(batch.next_state)
+        return (t1, t2, t3, t4)
 
     def ready(self, n_items):
         return n_items < len(self.items)

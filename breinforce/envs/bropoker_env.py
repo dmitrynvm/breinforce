@@ -90,8 +90,13 @@ def get_legal_actions(state):
 
 
 def get_legal_actions_dict(state):
+    call = get_call(state)
     max_raise = get_max_raise(state)
-    out = {'fold': 0, 'call': get_call(state), 'all_in': max_raise}
+    out = {'fold': 0}
+    if call:
+        out['call'] = call
+    if max_raise:
+        out['all_in'] = max_rise
     for i, split in enumerate(state.splits):
         action = get_call(state) + int(split * state.pot)
         if action < max_raise:
@@ -122,16 +127,15 @@ def get_observation(state) -> Dict:
         "player": state.player,
         "pot": state.pot,
         "call": get_call(state),
-        "max_raise": get_max_raise(state),
         "min_raise": get_min_raise(state),
+        "max_raise": get_max_raise(state),
         "legal_actions": get_legal_actions_dict(state),
-        "board_cards": board_cards,
-        "hole_cards": hole_cards[state.player],
-        "alive": state.alive,
-        "stacks": state.stacks,
-        "commits": state.commits
+        "board_cards": list(board_cards),
+        "hole_cards": list(hole_cards[state.player]),
+        "alive": list(state.alive),
+        "stacks": list(state.stacks),
+        "commits": list(state.commits)
     }
-    # print(obs["call"], obs["min_raise"], obs["max_raise"])
     return obs
 
 def evaluate(state) -> np.ndarray:
