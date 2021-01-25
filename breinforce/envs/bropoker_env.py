@@ -10,6 +10,7 @@ from breinforce.games.bropoker import Deck, Judge
 from breinforce.views import AsciiView, HandsView
 
 
+
 def gen_uuid():
     return str(uuid.uuid4().int)[:11]
 
@@ -18,8 +19,10 @@ def clean(legal_actions, action) -> int:
     """
     Find closest bet size to actual bet
     """
-    index = np.argmin(np.absolute(np.array(legal_actions) - action))
-    return legal_actions[index]
+    vals = list(legal_actions.values())
+    items = list(legal_actions.items())
+    index = np.argmin(np.absolute(np.array(vals) - action))
+    return items[index]
 
 
 def get_call(state) -> int:
@@ -81,26 +84,18 @@ def get_agree(state) -> bool:
 def get_legal_actions(state):
     call = get_call(state)
     max_raise = get_max_raise(state)
-    outs = {0, call, max_raise}
-    for split in state.splits:
-        out = get_call(state) + int(split * state.pot)
-        if out < get_max_raise(state):
-            outs.add(out)
-    return list(sorted(outs))
-
-
-def get_legal_actions_dict(state):
-    call = get_call(state)
-    max_raise = get_max_raise(state)
-    out = [0]
-    if call:
-        out.append(call)
-    for split in state.splits:
-        action = get_call(state) + int(split * state.pot)
+    n_splits = len(state.splits)
+    raises = [f'raise_{i}' for i in range(n_splits)]
+    Actions = namedtuple('Actions', ('fold', 'check', 'call', *raises, 'all_in'))
+    out = {}
+    out['fold'] = -1
+    out['check'] = 0
+    out['call'] = call
+    for i, split in enumerate(state.splits):
+        action = call + int(split * state.pot)
         if action < max_raise:
-            out.append(action)
-    if max_raise:
-        out.append(max_raise)
+            out[f'raise_{i+1}'] = action
+    out['all_in'] = max_raise
     return out
 
 
@@ -129,12 +124,12 @@ def get_observation(state) -> Dict:
         "call": get_call(state),
         "min_raise": get_min_raise(state),
         "max_raise": get_max_raise(state),
-        "legal_actions": get_legal_actions_dict(state),
         "board_cards": list(board_cards),
         "hole_cards": list(hole_cards[state.player]),
         "alive": list(state.alive),
         "stacks": list(state.stacks),
-        "commits": list(state.commits)
+        "commits": list(state.commits),
+        "legal_actions": get_legal_actions(state)
     }
     return obs
 
@@ -226,6 +221,8 @@ def perform_blinds_(state):
 
 
 class BropokerEnv(gym.Env):
+
+
     def __init__(self, config) -> None:
 
         # envs
@@ -282,8 +279,16 @@ class BropokerEnv(gym.Env):
             (gym.spaces.Discrete(self.n_ranks), gym.spaces.Discrete(self.n_suits))
         )
         hole_card_space = gym.spaces.Tuple((card_space,) * self.n_hole_cards)
+        legal_actions = {}
+        legal_actions['fold'] = gym.spaces.Discrete(max_action)
+        legal_actions['check'] = gym.spaces.Discrete(max_action)
+        legal_actions['call'] = gym.spaces.Discrete(max_action)
+        n_splits = len(self.splits)
+        for i in range(n_splits):
+            legal_actions[f'raise_{i+1}'] = gym.spaces.Discrete(max_action)
+        legal_actions['all_in'] = gym.spaces.Discrete(max_action)
 
-        self.observation_space = gym.spaces.Dict(
+        self.observation = gym.spaces.Dict(
             {
                 "action": gym.spaces.Discrete(self.n_players),
                 "alive": gym.spaces.MultiBinary(self.n_players),
@@ -297,7 +302,8 @@ class BropokerEnv(gym.Env):
                 "stacks": gym.spaces.Tuple((gym.spaces.Discrete(max_action),) * self.n_players),
                 "street_commits": gym.spaces.Tuple(
                     (gym.spaces.Discrete(max_action),) * self.n_players
-                )
+                ),
+                "legal_action": gym.spaces.Dict(legal_actions)
             }
         )
 
@@ -339,14 +345,11 @@ class BropokerEnv(gym.Env):
 
     def step(self, action: int) -> Tuple[Dict, np.ndarray, np.ndarray]:
         legal_actions = get_legal_actions(self)
-        legal_actions_dict = get_legal_actions_dict(self)
-        action = clean(legal_actions, action)
-        action_type = get_action_type(self, action)
+        type_, action = clean(legal_actions, action)
         call = get_call(self)
         # print(action, get_call(self), get_min_raise(self), get_max_raise(self), 'commits', self.commits)
         info = {
-            "action_type": action_type,
-            "legal_actions": legal_actions,
+            "action_type": type_,
             "call": call,
             "min_raise": get_min_raise(self),
             "max_raise": get_max_raise(self),

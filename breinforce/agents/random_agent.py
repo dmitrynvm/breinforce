@@ -10,4 +10,4 @@ class RandomAgent(BaseAgent):
         self.probs = probs
 
     def act(self, obs):
-        return random.choice(obs['legal_actions'])
+        return random.choice(list(obs['legal_actions'].values()))
