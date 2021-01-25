@@ -251,7 +251,7 @@ def learn(agent, policy_nn, target_nn):
             if all(done):
                 break
 
-        print(env.render())
+#        print(env.render())
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 from datetime import datetime
 import gym
 import numpy as np
-import uuid as gen
+import uuid
 from collections import namedtuple
 from typing import Dict, List, Optional, Tuple
 from breinforce.agents import BaseAgent
@@ -11,7 +11,7 @@ from breinforce.games.bropoker import Deck, Judge
 from breinforce.views import AsciiView, HandsView
 
 
-def uuid(mode='int'):
+def guid(size, mode='int'):
     """
     Generates unique object identifier
 
@@ -23,9 +23,9 @@ def uuid(mode='int'):
     """
     out = ''
     if mode == 'int':
-        out = str(gen.uuid4().int)[:11]
+        out = str(uuid.uuid4().int)[:size]
     else:
-        out = str(gen.uuid4().hex)[:11]
+        out = str(uuid.uuid4().hex)[:size]
     return out
 
 
@@ -251,18 +251,18 @@ def perform_blinds_(state):
 
 def create_state(config):
     '''
-        self.hand_id = uuid()
-        self.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-        self.table_name = "Table_1"
         self.player_ids = ["agent_" + str(i+1) for i in range(self.n_players)]
         self.hole_cards = []
         self.board_cards = []
         self.payouts = None
     '''
+    n_players = config['n_players']
     out = {
         **config,
-        'hand_id': uuid('int'),
+        'hand_id': uuid(9, 'int'),
         'date': date(),
+        'table': uuid(5, 'int'),
+        'player_ids': ["agent_" + str(i+1) for i in range(n_players)]
     }
     return out
 
@@ -271,7 +271,7 @@ class BropokerEnv(gym.Env):
 
     def __init__(self, config) -> None:
         self.store = create_state(config)
-        print(state)
+        print(self.store)
 
         # envs
         self.n_players = config["n_players"]
