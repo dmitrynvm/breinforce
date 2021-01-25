@@ -27,17 +27,17 @@ def learn():
     players = [agents.RandomAgent(probs)] * 6
     env.register(players)
     obs = env.reset()
-    print(obs)
-'''
+
+    #print(obs)
     while True:
         action = env.act(obs)
-        obs, rewards, done, info = env.step(action)
+        obs, rewards, done = env.step(action)
 
         if all(done):
             break
 
     print(env.history)
-'''
+
 
 if __name__ == "__main__":
     learn()

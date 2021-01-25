@@ -14,6 +14,10 @@ from breinforce.views import AsciiView, HandsView
 pp = pprint.PrettyPrinter(indent=4)
 
 
+deck = None
+judge = None
+
+
 def guid(size, mode='int'):
     """
     Generates unique object identifier
@@ -62,16 +66,13 @@ def get_call(state) -> int:
     out = 0
     if not all(get_done(state)):
         out = state.commits.max() - state.commits[state.player]
-        print(out)
         out = min(out, state.stacks[state.player])
-        print(out)
     return out
 
 
 def get_min_raise(state) -> int:
     out = 0
     if not all(get_done(state)):
-        print(state.straddle)
         out = max(state.straddle, get_call(state) + state.largest)
         out = min(out, state.stacks[state.player])
     return out
@@ -135,7 +136,7 @@ def observe(state):
     out = None
     board_cards = [str(c) for c in state.board_cards]
     hole_cards = [[str(c) for c in cs] for cs in state.hole_cards]
-    out: dict = {
+    body = {
         "street": state.street,
         "button": state.button,
         "player": state.player,
@@ -143,21 +144,21 @@ def observe(state):
         "call": get_call(state),
         "min_raise": get_min_raise(state),
         "max_raise": get_max_raise(state),
-        "board_cards": list(board_cards),
-        "hole_cards": list(hole_cards[state.player]),
+        "board_cards": board_cards,
+        "hole_cards": hole_cards[state.player],
         "alive": list(state.alive),
         "stacks": list(state.stacks),
         "commits": list(state.commits),
-        "legal_actions": state.legal_actions
+        "legal_actions": get_legal_actions(state)
     }
 
-    return out
-
+    return Dict(body)
 
 
 def evaluate(state) -> np.ndarray:
+    global judge
     # grab array of hand strength and pot contribs
-    worst_hand = state.judge.hashmap.max_rank + 1
+    worst_hand = judge.hashmap.max_rank + 1
     hand_list = []
     payouts = np.zeros(state.n_players, dtype=int)
     for player in range(state.n_players):
@@ -165,7 +166,7 @@ def evaluate(state) -> np.ndarray:
         # to 1 worse than worst possible rank
         hand_strength = worst_hand
         if state.alive[player]:
-            hand_strength = state.judge.evaluate(
+            hand_strength = judge.evaluate(
                 state.hole_cards[player], state.board_cards
             )
         hand_list.append([player, hand_strength, state.contribs[player]])
@@ -241,9 +242,6 @@ def perform_blinds_(state):
     state.stacks -= actions
 
 
-deck = None
-judge = None
-
 def create_state(config):
     global deck, judge
     n_players = config['n_players']
@@ -276,6 +274,9 @@ def create_state(config):
         'table_name': guid(5, 'int'),
         'date': date(),
         'player_names': ["agent_" + str(i+1) for i in range(n_players)],
+        'small_blind': config['blinds'][0],
+        'big_blind': config['blinds'][1],
+        'straddle': config['blinds'][2],
         # dealer
         'street': 0,
         'button': 0,
@@ -289,8 +290,7 @@ def create_state(config):
         'contribs': np.zeros(n_players, dtype=np.int32),
         'acted': np.zeros(n_players, dtype=np.uint8),
         'commits': np.zeros(n_players, dtype=np.int32),
-        'folded': [n_streets for i in range(n_players)],
-        'legal_actions': Dict()
+        'folded': [n_streets for i in range(n_players)]
     }
 
     return Dict(body)
@@ -298,16 +298,17 @@ def create_state(config):
 
 class BropokerEnv(gym.Env):
 
-    def __init__(self, config) -> None:
+    def __init__(self, config):
         self.config = config
         self.state = create_state(config)
         self.history = []
         self.agents = None
 
-    def register(self, agents) -> None:
+    def register(self, agents):
         self.agents = agents
 
-    def act(self, obs: dict) -> int:
+    def act(self, obs):
+        print('player', obs.player)
         return self.agents[obs.player].act(obs)
 
     def reset(self):
@@ -318,74 +319,61 @@ class BropokerEnv(gym.Env):
         self.history = []
         if self.state.n_players > 2:
             move_(self.state)
-        pp.pprint(self.state)
-        min_raise = get_min_raise(self.state)
-        '''
-        # perform_antes_(self)
-        perform_blinds_(self)
-        move_(self)
-        move_(self)
-        move_(self)
-        '''
+        perform_antes_(self.state)
+        perform_blinds_(self.state)
+        move_(self.state)
+        move_(self.state)
+        move_(self.state)
+        return observe(self.state)
 
-        return #observe(self.state)
-
-    def step(self, action: int):
-        legal_actions = get_legal_actions(self)
+    def step(self, action):
+        legal_actions = get_legal_actions(self.state)
         type_, action = clean(legal_actions, action)
-        call = get_call(self)
-        info = {
-            "action_type": type_,
-            "call": call,
-            "min_raise": get_min_raise(self),
-            "max_raise": get_max_raise(self),
-            "stack": self.stacks[self.player]
-        }
+        call = get_call(self.state)
 
         # larg
-        if action and (action - call) >= self.largest:
-            self.largest = action - call
+        if action and (action - call) >= self.state.largest:
+            self.state.largest = action - call
 
         # fold
         if call and ((action < call) or action < 0):
             action = 0
-            self.alive[self.player] = 0
-            self.folded[self.player] = self.street
+            self.state.alive[self.state.player] = 0
+            self.state.folded[self.state.player] = self.state.street
 
-        self.history.append((self.state, self.player, action, info))
-        perform_action_(self, action)
-        move_(self)
+        self.history.append((self.state, action))
+        perform_action_(self.state, action)
+        move_(self.state)
 
         # if all agreed go to next street
-        if all(get_agree(self)):
-            self.player = self.button
-            move_(self)
+        if all(get_agree(self.state)):
+            self.state.player = self.state.button
+            move_(self.state)
             # if at most 1 player alive and not all in turn up all
             # board cards and evaluate hand
             while True:
-                self.street += 1
-                allin = self.alive * (self.stacks == 0)
-                all_allin = sum(self.alive) - sum(allin) <= 1
-                if self.street >= self.n_streets:
+                self.state.street += 1
+                allin = self.state.alive * (self.state.stacks == 0)
+                all_allin = sum(self.state.alive) - sum(allin) <= 1
+                if self.state.street >= self.state.n_streets:
                     break
-                self.board_cards += self.deck.draw(
-                    self.ns_board_cards[self.street]
+                self.state.board_cards += deck.draw(
+                    self.state.ns_board_cards[self.state.street]
                 )
                 if not all_allin:
                     break
-            self.commits.fill(0)
-            self.acted = np.logical_not(self.alive).astype(np.uint8)
+            self.state.commits.fill(0)
+            self.state.acted = np.logical_not(self.state.alive).astype(np.uint8)
 
-        obs = get_observation(self)
-        payouts = get_payouts(self)
-        self.payouts = payouts
-        done = get_done(self)
-        info = None
+        obs = observe(self.state)
+        payouts = get_payouts(self.state)
+        done = get_done(self.state)
         if all(done):
-            self.player = -1
+            self.state.player = -1
             obs["player"] = -1
-        obs["hole_cards"] = obs["hole_cards"]#[obs["player"]]
-        return obs, payouts, done, info
+
+        self.state.payouts = payouts
+        return obs, payouts, done
 
     def render(self, mode="hands"):
         out = None
