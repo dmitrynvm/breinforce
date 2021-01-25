@@ -71,6 +71,7 @@ def get_call(state) -> int:
 def get_min_raise(state) -> int:
     out = 0
     if not all(get_done(state)):
+        print(state.straddle)
         out = max(state.straddle, get_call(state) + state.largest)
         out = min(out, state.stacks[state.player])
     return out
@@ -318,8 +319,8 @@ class BropokerEnv(gym.Env):
         if self.state.n_players > 2:
             move_(self.state)
         pp.pprint(self.state)
-        '''
         min_raise = get_min_raise(self.state)
+        '''
         # perform_antes_(self)
         perform_blinds_(self)
         move_(self)
