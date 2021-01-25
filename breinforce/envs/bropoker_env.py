@@ -1,8 +1,9 @@
 """Bropoker environment class for running poker games"""
+
 from datetime import datetime
 import gym
 import numpy as np
-import uuid
+import uuid as gen
 from collections import namedtuple
 from typing import Dict, List, Optional, Tuple
 from breinforce.agents import BaseAgent
@@ -10,14 +11,33 @@ from breinforce.games.bropoker import Deck, Judge
 from breinforce.views import AsciiView, HandsView
 
 
+def uuid(mode='int'):
+    """
+    Generates unuque object identifier
 
-def gen_uuid():
-    return str(uuid.uuid4().int)[:11]
+    Args:
+        mode (str): mode of generating identifier
+
+    Returns:
+        str: generated identifier
+    """
+    out = ''
+    if mode == 'int':
+        out = str(gen.uuid4().int)[:11]
+    else:
+        out = str(gen.uuid4().hex)[:11]
+    return out
 
 
 def clean(legal_actions, action) -> int:
     """
-    Find closest bet size to actual bet
+    Find closest (type, action) pair to given one.
+
+    Args:
+        action (int): betting amount
+
+    Returns:
+        tuple: (type, action)
     """
     vals = list(legal_actions.values())
     items = list(legal_actions.items())
@@ -86,7 +106,6 @@ def get_legal_actions(state):
     max_raise = get_max_raise(state)
     n_splits = len(state.splits)
     raises = [f'raise_{i}' for i in range(n_splits)]
-    Actions = namedtuple('Actions', ('fold', 'check', 'call', *raises, 'all_in'))
     out = {}
     out['fold'] = -1
     out['check'] = 0
@@ -220,10 +239,28 @@ def perform_blinds_(state):
     state.stacks -= actions
 
 
+def create_state(config):
+    '''
+        self.hand_id = uuid()
+        self.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+        self.table_name = "Table_1"
+        self.player_ids = ["agent_" + str(i+1) for i in range(self.n_players)]
+        self.hole_cards = []
+        self.board_cards = []
+        self.payouts = None
+    '''
+    out = {
+        **config,
+        'hand_id': uuid('int')
+    }
+    return out
+
+
 class BropokerEnv(gym.Env):
 
-
     def __init__(self, config) -> None:
+        state = create_state(config)
+        print(state)
 
         # envs
         self.n_players = config["n_players"]
@@ -245,7 +282,7 @@ class BropokerEnv(gym.Env):
         self.small_blind = config["blinds"][0]
         self.big_blind = config["blinds"][1] if self.n_players > 2 else None
         self.straddle = config["blinds"][2] if self.n_players > 3 else None
-        self.hand_id = gen_uuid()
+        self.hand_id = uuid()
         self.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         self.table_name = "Table_1"
         self.player_ids = ["agent_" + str(i+1) for i in range(self.n_players)]
@@ -290,7 +327,7 @@ class BropokerEnv(gym.Env):
 
         self.observation = gym.spaces.Dict(
             {
-                "action": gym.spaces.Discrete(self.n_players),
+                "action": gym.spaces.Discrete(max_action),
                 "alive": gym.spaces.MultiBinary(self.n_players),
                 "button": gym.spaces.Discrete(self.n_players),
                 "call": gym.spaces.Discrete(max_action),
@@ -347,7 +384,6 @@ class BropokerEnv(gym.Env):
         legal_actions = get_legal_actions(self)
         type_, action = clean(legal_actions, action)
         call = get_call(self)
-        # print(action, get_call(self), get_min_raise(self), get_max_raise(self), 'commits', self.commits)
         info = {
             "action_type": type_,
             "call": call,
