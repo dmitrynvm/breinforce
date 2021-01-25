@@ -13,7 +13,7 @@ class RandomAgent(BaseAgent):
         legal_actions = obs['legal_actions']
         indices = list(range(len(legal_actions)))
         index = random.choice(indices)
-        out = list(legal_actions.values())[index]
+        out = legal_actions[index]
         '''
         if obs['street'] == 0:
             out = legal_actions['call']

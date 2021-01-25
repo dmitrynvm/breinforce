@@ -19,7 +19,7 @@ from time import sleep
 np.random.seed(1)
 pd.options.plotting.backend = "plotly"
 
-Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward'))
+Episode = namedtuple('Episode', ('state', 'action', 'next_state', 'reward'))
 
 
 def encode(obs):
@@ -134,7 +134,7 @@ class SequentialMemory():
         return random.sample(self.items, n_items)
 
     def extract(self, n_items):
-        batch = Experience(*zip(*self.sample(n_items)))
+        batch = Episode(*zip(*self.sample(n_items)))
         t1 = torch.cat(batch.state)
         t2 = torch.cat(batch.action)
         t3 = torch.stack(batch.reward, axis=0)
@@ -233,7 +233,7 @@ def learn(agent, policy_nn, target_nn):
 
             reward = torch.from_numpy(np.array(rewards[player_id]))
             next_enc_obs = encode(obs)
-            memory.add(Experience(enc_obs, action, next_enc_obs, reward))
+            memory.add(Episode(enc_obs, action, next_enc_obs, reward))
 
             if memory.ready(batch_size):
                 obses, actions, rewards, next_obses = memory.extract(batch_size)

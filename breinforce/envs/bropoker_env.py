@@ -92,15 +92,15 @@ def get_legal_actions(state):
 def get_legal_actions_dict(state):
     call = get_call(state)
     max_raise = get_max_raise(state)
-    out = {'fold': 0}
+    out = [0]
     if call:
-        out['call'] = call
-    if max_raise:
-        out['all_in'] = max_rise
-    for i, split in enumerate(state.splits):
+        out.append(call)
+    for split in state.splits:
         action = get_call(state) + int(split * state.pot)
         if action < max_raise:
-            out[f"raise_{i+1}"] = action
+            out.append(action)
+    if max_raise:
+        out.append(max_raise)
     return out
 
 
