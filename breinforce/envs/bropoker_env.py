@@ -13,7 +13,7 @@ from breinforce.views import AsciiView, HandsView
 
 def uuid(mode='int'):
     """
-    Generates unuque object identifier
+    Generates unique object identifier
 
     Args:
         mode (str): mode of generating identifier
@@ -27,6 +27,16 @@ def uuid(mode='int'):
     else:
         out = str(gen.uuid4().hex)[:11]
     return out
+
+
+def date():
+    """
+    Generates unuque object identifier
+
+    Returns:
+        str: generated formated date
+    """
+    return datetime.now().strftime("%d %m %Y %H:%M:%S")
 
 
 def clean(legal_actions, action) -> int:
@@ -251,7 +261,8 @@ def create_state(config):
     '''
     out = {
         **config,
-        'hand_id': uuid('int')
+        'hand_id': uuid('int'),
+        'date': date(),
     }
     return out
 
@@ -259,7 +270,7 @@ def create_state(config):
 class BropokerEnv(gym.Env):
 
     def __init__(self, config) -> None:
-        state = create_state(config)
+        self.store = create_state(config)
         print(state)
 
         # envs
