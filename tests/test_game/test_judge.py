@@ -1,6 +1,6 @@
 import pytest
 from breinforce import errors
-from breinforce.games.bropoker import Card, Deck, HashMap, Judge
+from breinforce.games.bropoker import Card, HashMap, Judge
 
 
 def test_init():
@@ -10,27 +10,6 @@ def test_init():
         Judge(4, 13, 6)
     with pytest.raises(errors.InvalidOrderError):
         HashMap(4, 13, 5, order=["lala"])
-
-
-"""
-def test_str_repr():
-    judge = Judge(4, 13, 5)
-    string = (
-        "straight flush (0.0015%) > four of a kind (0.0240%) > "
-        "full house (0.1441%) > flush (0.1965%) > straight (0.3925%) > "
-        "three of a kind (2.1128%) > two pair (4.7539%) > "
-        "pair (42.2569%) > high card (50.1177%)"
-    )
-    repr_string = (
-        f"Judge ({id(judge)}): straight flush (0.0015%) > "
-        f"four of a kind (0.0240%) > full house (0.1441%) > "
-        f"flush (0.1965%) > straight (0.3925%) > "
-        f"three of a kind (2.1128%) > two pair (4.7539%) > "
-        f"pair (42.2569%) > high card (50.1177%)"
-    )
-    assert str(judge) == string
-    assert repr(judge) == repr_string
-"""
 
 
 def test_hand_rank():

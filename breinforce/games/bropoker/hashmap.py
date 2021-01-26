@@ -5,8 +5,74 @@ import itertools
 import operator
 from typing import Dict, List
 from breinforce import errors
-from . import utils
 from .card import Card
+
+
+
+def lexographic_next_bit(bits):
+    # generator next legographic bit sequence given a bit sequence with
+    # N bits set e.g.
+    # 00010011 -> 00010101 -> 00010110 -> 00011001 ->
+    # 00011010 -> 00011100 -> 00100011 -> 00100101
+    lex = bits
+    yield lex
+    while True:
+        temp = (lex | (lex - 1)) + 1
+        lex = temp | ((((temp & -temp) // (lex & -lex)) >> 1) - 1)
+        yield lex
+
+
+def ncr(n, r):
+    r = min(r, n - r)
+    numer = functools.reduce(operator.mul, range(n, n - r, -1), 1)
+    denom = functools.reduce(operator.mul, range(1, r + 1), 1)
+    return numer / denom
+
+
+def prime_product_from_rankbits(rankbits: int) -> int:
+    """Computes prime product from rankbits of cards, primarily used
+    for evaluating flushes and straights. Expects 13 bit integer
+    with bits of the cards in the hand flipped.
+
+    Parameters
+    ----------
+    rankbits : int
+        13 bit integer with flipped rank bits
+
+    Returns
+    -------
+    int
+        prime product of rank cards
+    """
+
+    product = 1
+    for i in Card.INT_RANKS:
+        # if the ith bit is set
+        if rankbits & (1 << i):
+            product *= Card.PRIMES[i]
+    return product
+
+
+def prime_product_from_hand(cards: List[Card]) -> int:
+    """Computes unique prime product for a list of cards. Used for
+    evaluating hands
+
+    Parameters
+    ----------
+    cards : List[Card]
+        list of cards
+
+    Returns
+    -------
+    int
+        prime product of cards
+    """
+
+    product = 1
+    for card in cards:
+        product *= card & 0xFF
+    return product
+
 
 
 class HashMap:
@@ -166,9 +232,9 @@ class HashMap:
         # if all flush bits equal then use flush lookup
         if functools.reduce(operator.and_, cards, 0xF000):
             hand_or = functools.reduce(operator.or_, cards) >> 16
-            prime = utils.prime_product_from_rankbits(hand_or)
+            prime = prime_product_from_rankbits(hand_or)
             return self.suited_lookup[prime]
-        prime = utils.prime_product_from_hand(cards)
+        prime = prime_product_from_hand(cards)
         return self.unsuited_lookup[prime]
 
     def __straight_flush(self, suits, ranks, cards_for_hand, low_end_straight):
@@ -186,7 +252,7 @@ class HashMap:
         # choose 1 rank for quads multiplied by
         # rank choice for remaining cards
         unsuited = \
-            utils.ncr(ranks, 1) * utils.ncr(ranks - 1, cards_for_hand - 4)
+            ncr(ranks, 1) * ncr(ranks - 1, cards_for_hand - 4)
         # mutliplied with number of suit choices for remaining cards
         suited = max(unsuited, unsuited * suits ** (cards_for_hand - 4))
         return int(suited), int(unsuited)
@@ -197,15 +263,15 @@ class HashMap:
         # choose one rank for trips and pair multiplied by
         # rank choice for remaining cards
         unsuited = (
-            utils.ncr(ranks, 1)
-            * utils.ncr(ranks - 1, 1)
-            * utils.ncr(ranks - 2, cards_for_hand - 5)
+            ncr(ranks, 1)
+            * ncr(ranks - 1, 1)
+            * ncr(ranks - 2, cards_for_hand - 5)
         )
         # multiplied with number of suit choices for
         # trips + pair and remaining cards
         suited = max(
             unsuited,
-            unsuited * utils.ncr(suits, 3) * utils.ncr(suits, 2) * suits
+            unsuited * ncr(suits, 3) * ncr(suits, 2) * suits
             ** (cards_for_hand - 5),
         )
         return int(suited), int(unsuited)
@@ -216,7 +282,7 @@ class HashMap:
         # all straight combinations
         straight_flushes = ranks - (cards_for_hand - 1) + low_end_straight
         # choose all cards from ranks minus straight flushes
-        unsuited = utils.ncr(ranks, cards_for_hand) - straight_flushes
+        unsuited = ncr(ranks, cards_for_hand) - straight_flushes
         # multiplied by number of suits
         suited = max(unsuited, unsuited * suits)
         return int(suited), int(unsuited)
@@ -246,11 +312,11 @@ class HashMap:
         # choose one rank for trips multiplied by
         # rank choice for remaining cards
         unsuited = \
-            utils.ncr(ranks, 1) * utils.ncr(ranks - 1, cards_for_hand - 3)
+            ncr(ranks, 1) * ncr(ranks - 1, cards_for_hand - 3)
         # multiplied with suit choices for trips and remaining cards
         suited = max(
             unsuited,
-            unsuited * utils.ncr(suits, 3) * utils.ncr(suits, 3)
+            unsuited * ncr(suits, 3) * ncr(suits, 3)
             ** (cards_for_hand - 3)
         )
         return int(suited), int(unsuited)
@@ -261,12 +327,12 @@ class HashMap:
         # choose two ranks for pairs multiplied by
         # ranks for remaining cards
         unsuited = \
-            utils.ncr(ranks, 2) * utils.ncr(ranks - 2, cards_for_hand - 4)
+            ncr(ranks, 2) * ncr(ranks - 2, cards_for_hand - 4)
         # multiplied with suit choices for both pairs
         # and suit choices for remaining cards
         suited = max(
             unsuited,
-            unsuited * utils.ncr(suits, 2) ** 2 * suits
+            unsuited * ncr(suits, 2) ** 2 * suits
             ** (cards_for_hand - 4)
         )
         return int(suited), int(unsuited)
@@ -277,11 +343,11 @@ class HashMap:
         # choose rank for pair multiplied by
         # ranks for remaining cards
         unsuited = \
-            utils.ncr(ranks, 1) * utils.ncr(ranks - 1, cards_for_hand - 2)
+            ncr(ranks, 1) * ncr(ranks - 1, cards_for_hand - 2)
         # multiplied with suit choices for pair and remaining cards
         suited = max(
             unsuited,
-            unsuited * utils.ncr(suits, 2) * suits
+            unsuited * ncr(suits, 2) * suits
             ** (cards_for_hand - 2)
         )
         return int(suited), int(unsuited)
@@ -292,7 +358,7 @@ class HashMap:
         if cards_for_hand > 2:
             straights = ranks - (cards_for_hand - 1) + low_end_straight
         # any combination of rank and subtract straights
-        unsuited = utils.ncr(ranks, cards_for_hand) - straights
+        unsuited = ncr(ranks, cards_for_hand) - straights
         # multiplied with suit choices for all cards
         # all same suits not allowed
         suited = max(unsuited, unsuited * (suits ** cards_for_hand - suits))
@@ -329,9 +395,9 @@ class HashMap:
         # start with lowest non pair hand
         # for 5 card hand with 13 ranks: 0b11111
         bin_n_str = "0b" + ("1" * cards_for_hand)
-        gen = utils.lexographic_next_bit(int(bin_n_str, 2))
+        gen = lexographic_next_bit(int(bin_n_str, 2))
         # iterate over all possibilities of unique hands
-        for _ in range(int(utils.ncr(ranks, cards_for_hand))):
+        for _ in range(int(ncr(ranks, cards_for_hand))):
             # pull the next flush pattern from generator
             # offset by number of ranks not in play
             flush = next(gen) << (13 - ranks)
@@ -367,7 +433,7 @@ class HashMap:
             assert n_ranks == self.hand_dict[rank_string]["unsuited"]
             hand_rank = self.__get_rank(rank_string)
             for rank_bit in rank_bits:
-                prime_product = utils.prime_product_from_rankbits(rank_bit)
+                prime_product = prime_product_from_rankbits(rank_bit)
                 if suited:
                     self.suited_lookup[prime_product] = hand_rank
                 else:

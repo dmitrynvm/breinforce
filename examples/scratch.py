@@ -16,6 +16,9 @@ from tabulate import tabulate
 from tqdm import tqdm
 from time import sleep
 
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
+
 np.random.seed(1)
 pd.options.plotting.backend = "plotly"
 
@@ -36,7 +39,7 @@ def learn():
         if all(done):
             break
 
-    print(env.history)
+    pp.pprint(env.history)
 
 
 if __name__ == "__main__":
