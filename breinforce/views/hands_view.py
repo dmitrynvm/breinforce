@@ -1,8 +1,7 @@
 import os
-from .base_view import BaseView
 
 
-class HandsView(BaseView):
+class HandsView():
     '''Poker hands history view in the PokerStars format with delayed rendering.
     '''
 

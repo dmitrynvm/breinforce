@@ -6,11 +6,13 @@ import gym
 import numpy as np
 import uuid
 import random
+import string
 from addict import Dict
 from collections import namedtuple
-from breinforce.agents import BaseAgent
-from breinforce.games.bropoker import Card, Judge
-from breinforce.views import AsciiView, HandsView
+from breinforce import games, views
+
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 
 def create_deck(n_suits, n_ranks):
@@ -27,11 +29,11 @@ def create_deck(n_suits, n_ranks):
         number of ranks to use in deck
     """
     out = []
-    ranks = Card.STR_RANKS[-n_ranks:]
-    suits = list(Card.SUITS_TO_INTS.keys())[:n_suits]
+    ranks = games.bropoker.Card.STR_RANKS[-n_ranks:]
+    suits = list(games.bropoker.Card.SUITS_TO_INTS.keys())[:n_suits]
     for rank in ranks:
         for suit in suits:
-            out.append(Card(rank + suit))
+            out.append(games.bropoker.Card(rank + suit))
     return out
 
 
@@ -85,18 +87,8 @@ def guid(size, mode='int'):
     if mode == 'int':
         out = str(uuid.uuid4().int)[:size]
     else:
-        out = str(uuid.uuid4().hex)[:size]
+        out = ''.join(random.choice(string.ascii_lowercase) for _ in range(size))
     return out
-
-
-def date():
-    """
-    Generates unuque object identifier
-
-    Returns:
-        str: generated formated date
-    """
-    return datetime.now().strftime("%d %m %Y %H:%M:%S")
 
 
 def clean(legal_actions, action) -> int:
@@ -110,8 +102,9 @@ def clean(legal_actions, action) -> int:
         tuple: (type, action)
     """
     vals = list(legal_actions.values())
+    items = list(legal_actions.items())
     index = np.argmin(np.absolute(np.array(vals) - action))
-    return vals[index]
+    return items[index]
 
 
 def get_call(state) -> int:
@@ -211,7 +204,7 @@ def observe(state):
 
 
 def evaluate(state) -> np.ndarray:
-    judge = Judge(state.n_suits, state.n_ranks, state.n_cards_for_hand)
+    judge = games.bropoker.Judge(state.n_suits, state.n_ranks, state.n_cards_for_hand)
     # grab array of hand strength and pot contribs
     worst_hand = judge.hashmap.max_rank + 1
     hand_list = []
@@ -320,9 +313,9 @@ def create_state(config):
         'splits': np.array(config["splits"], dtype=int),
         'stacks': np.array(config["stacks"], dtype=int),
         # meta
-        'game_name': guid(9, 'int'),
-        'table_name': guid(5, 'int'),
-        'date': date(),
+        'game': guid(9, 'int'),
+        'table': guid(5, 'str'),
+        'date': datetime.now(),
         'player_names': ["agent_" + str(i+1) for i in range(n_players)],
         'small_blind': config['blinds'][0],
         'big_blind': config['blinds'][1] if n_players > 1 else None,
@@ -356,7 +349,7 @@ def create_state(config):
 
 
 def update_largest_(state, action):
-    action = clean(state.legal_actions, action)
+    _, action = clean(state.legal_actions, action)
     call = get_call(state)
     if action and (action - call) >= state.largest:
         state.largest = action - call
@@ -409,10 +402,14 @@ class BropokerEnv(gym.Env):
 
     def step(self, action):
         legal_actions = get_legal_actions(self.state)
-        action = clean(legal_actions, action)
+        action_type, action = clean(legal_actions, action)
         update_largest_(self.state, action)
         update_flop_(self.state, action)
-        self.history.append((self.state, action))
+        self.history.append(Dict({
+            'state': self.state,
+            'action': action,
+            'action_type': action_type
+        }))
 
         perform_action_(self.state, action)
         move_(self.state)
@@ -430,11 +427,10 @@ class BropokerEnv(gym.Env):
     def act(self, obs):
         return self.agents[obs.player].act(obs)
 
-    def render(self, mode="hands"):
+    def render(self, mode="poker888"):
         out = None
-        hands_view = HandsView(self)
-        if mode == "hands":
-            out = hands_view.render()
+        if mode == "poker888":
+            out = views.poker888_view.render(self.history)
         return out
 
     @property

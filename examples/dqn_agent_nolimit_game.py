@@ -23,21 +23,6 @@ Episode = namedtuple('Episode', ('state', 'action', 'next_state', 'reward'))
 
 
 def encode(obs):
-    '''
-        "street": state.street,
-        "button": state.button,
-        "player": state.player,
-        "pot": state.pot,
-        "call": get_call(state),
-        "min_raise": get_min_raise(state),
-        "max_raise": get_max_raise(state),
-        "legal_actions": get_legal_actions_dict(state),
-        "board_cards": list(board_cards),
-        "hole_cards": list(hole_cards[state.player]),
-        "alive": list(state.alive),
-        "stacks": list(state.stacks),
-        "commits": list(state.commits)
-    '''
     pads = ['--' for i in range(5 - len(obs['board_cards']))]
     street = obs['street']
     button = obs['button']

@@ -18,11 +18,7 @@ from time import sleep
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
-
 np.random.seed(1)
-pd.options.plotting.backend = "plotly"
-
-Episode = namedtuple('Episode', ('state', 'action', 'next_state', 'reward'))
 
 def learn():
     env = gym.make('CustomSixPlayer-v0')
@@ -31,15 +27,13 @@ def learn():
     env.register(players)
     obs = env.reset()
 
-    #print(obs)
     while True:
         action = env.act(obs)
         obs, rewards, done = env.step(action)
 
         if all(done):
             break
-
-    pp.pprint(env.history)
+    print(env.render())
 
 
 if __name__ == "__main__":

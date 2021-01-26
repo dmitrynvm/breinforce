@@ -1,9 +1,8 @@
-from .base_view import BaseView
-from .ascii_view import AsciiView
-from .hands_view import HandsView
+from . import base_view
+from . import ascii_view
+from . import hands_view
+from . import poker888_view
 
 __all__ = [
-    "BaseView",
-    "AsciiView",
-    "HandsView"
+    "poker888_view"
 ]
