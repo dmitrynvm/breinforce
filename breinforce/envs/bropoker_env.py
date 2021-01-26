@@ -13,10 +13,6 @@ from breinforce.games.bropoker import Card, Judge
 from breinforce.views import AsciiView, HandsView
 
 
-deck = None
-judge = None
-
-
 def create_deck(n_suits, n_ranks):
     """A deck contains at most 52 cards, 13 ranks 4 suits. Any "subdeck"
     of the standard 52 card deck is valid, i.e. the number of suits
@@ -114,9 +110,8 @@ def clean(legal_actions, action) -> int:
         tuple: (type, action)
     """
     vals = list(legal_actions.values())
-    items = list(legal_actions.items())
     index = np.argmin(np.absolute(np.array(vals) - action))
-    return items[index]
+    return vals[index]
 
 
 def get_call(state) -> int:
@@ -157,6 +152,9 @@ def get_agree(state) -> bool:
     return acted + empty + committed + alived
 
 
+def update_legal_actions_(state):
+    state.legal_actions = get_legal_actions(state)
+
 def get_legal_actions(state):
     call = get_call(state)
     #min_raise = get_min_raise(state)
@@ -171,7 +169,7 @@ def get_legal_actions(state):
         action = call + int(split * state.pot)
         if action < max_raise:
             out[f'raise_{i+1}'] = action
-    out['push'] = max_raise
+    out['all_in'] = max_raise
     return out
 
 
@@ -213,7 +211,7 @@ def observe(state):
 
 
 def evaluate(state) -> np.ndarray:
-    global judge
+    judge = Judge(state.n_suits, state.n_ranks, state.n_cards_for_hand)
     # grab array of hand strength and pot contribs
     worst_hand = judge.hashmap.max_rank + 1
     hand_list = []
@@ -300,19 +298,14 @@ def perform_blinds_(state):
 
 
 def create_state(config):
-    global deck, judge
     n_players = config['n_players']
     n_streets = config['n_streets']
     n_ranks = config['n_ranks']
     n_suits = config['n_suits']
     n_hole_cards = config['n_hole_cards']
     n_board_cards = config['ns_board_cards'][0]
-    n_cards_for_hand = config['n_cards_for_hand']
     deck = shuffle(create_deck(n_suits, n_ranks))
-    
-    judge = Judge(n_suits, n_ranks, n_cards_for_hand)
-
-    body = {
+    state = Dict({
         'n_players': config["n_players"],
         'n_streets': config["n_streets"],
         'n_suits': config["n_suits"],
@@ -348,10 +341,54 @@ def create_state(config):
         'acted': np.zeros(n_players, dtype=np.uint8),
         'commits': np.zeros(n_players, dtype=np.int32),
         'folded': [n_streets for i in range(n_players)],
-        'deck': deck
-    }
+        'deck': deck,
+        'legal_actions': []
+    })
+    if n_players > 2:
+        move_(state)
+    perform_antes_(state)
+    perform_blinds_(state)
+    move_(state)
+    move_(state)
+    move_(state)
+    update_legal_actions_(state)
+    return state
 
-    return Dict(body)
+
+def update_largest_(state, action):
+    action = clean(state.legal_actions, action)
+    call = get_call(state)
+    if action and (action - call) >= state.largest:
+        state.largest = action - call
+
+
+def update_flop_(state, action):
+    call = get_call(state)
+    if call and ((action < call) or action < 0):
+        action = 0
+        state.alive[state.player] = 0
+        state.folded[state.player] = state.street
+
+def update_round_(state):
+    # if all agreed go to next street
+    if all(get_agree(state)):
+        state.player = state.button
+        move_(state)
+        # if at most 1 player alive and not all in turn up all
+        # board cards and evaluate hand
+        while True:
+            state.street += 1
+            allin = state.alive * (state.stacks == 0)
+            all_allin = sum(state.alive) - sum(allin) <= 1
+            if state.street >= state.n_streets:
+                break
+            state.board_cards += deal(state.deck,
+                state.ns_board_cards[state.street]
+            )
+            if not all_allin:
+                break
+        state.commits.fill(0)
+        state.acted = np.logical_not(state.alive).astype(np.uint8)
 
 
 class BropokerEnv(gym.Env):
@@ -362,76 +399,36 @@ class BropokerEnv(gym.Env):
         self.history = []
         self.agents = None
 
-    def register(self, agents):
-        self.agents = agents
-
-    def act(self, obs):
-        print('player', obs.player)
-        return self.agents[obs.player].act(obs)
-
     def reset(self):
         """Resets the hash table. Shuffles the deck, deals new hole cards
         to all players, moves the button and collects blinds and antes.
         """
         self.state = create_state(self.config)
         self.history = []
-        if self.state.n_players > 2:
-            move_(self.state)
-        perform_antes_(self.state)
-        perform_blinds_(self.state)
-        move_(self.state)
-        move_(self.state)
-        move_(self.state)
         return observe(self.state)
 
     def step(self, action):
         legal_actions = get_legal_actions(self.state)
-        type_, action = clean(legal_actions, action)
-        call = get_call(self.state)
-
-        # larg
-        if action and (action - call) >= self.state.largest:
-            self.state.largest = action - call
-
-        # fold
-        if call and ((action < call) or action < 0):
-            action = 0
-            self.state.alive[self.state.player] = 0
-            self.state.folded[self.state.player] = self.state.street
-
+        action = clean(legal_actions, action)
+        update_largest_(self.state, action)
+        update_flop_(self.state, action)
         self.history.append((self.state, action))
+
         perform_action_(self.state, action)
         move_(self.state)
-
-        # if all agreed go to next street
-        if all(get_agree(self.state)):
-            self.state.player = self.state.button
-            move_(self.state)
-            # if at most 1 player alive and not all in turn up all
-            # board cards and evaluate hand
-            while True:
-                self.state.street += 1
-                allin = self.state.alive * (self.state.stacks == 0)
-                all_allin = sum(self.state.alive) - sum(allin) <= 1
-                if self.state.street >= self.state.n_streets:
-                    break
-                self.state.board_cards += deal(deck,
-                    self.state.ns_board_cards[self.state.street]
-                )
-                if not all_allin:
-                    break
-            self.state.commits.fill(0)
-            self.state.acted = np.logical_not(self.state.alive).astype(np.uint8)
+        update_round_(self.state)
 
         obs = observe(self.state)
         payouts = get_payouts(self.state)
         done = get_done(self.state)
-        if all(done):
-            self.state.player = -1
-            obs["player"] = -1
-
         self.state.payouts = payouts
         return obs, payouts, done
+
+    def register(self, agents):
+        self.agents = agents
+
+    def act(self, obs):
+        return self.agents[obs.player].act(obs)
 
     def render(self, mode="hands"):
         out = None
@@ -442,17 +439,17 @@ class BropokerEnv(gym.Env):
 
     @property
     def observation_space(self):
-        max_action = sum(self.stacks)
-        n_board_cards = sum(self.ns_board_cards)
+        max_action = sum(self.state.stacks)
+        n_board_cards = sum(self.state.ns_board_cards)
         card_space = gym.spaces.Tuple(
-            (gym.spaces.Discrete(self.n_ranks), gym.spaces.Discrete(self.n_suits))
+            (gym.spaces.Discrete(self.state.n_ranks), gym.spaces.Discrete(self.state.n_suits))
         )
-        hole_card_space = gym.spaces.Tuple((card_space,) * self.n_hole_cards)
+        hole_card_space = gym.spaces.Tuple((card_space,) * self.state.n_hole_cards)
         legal_actions = {}
         legal_actions['fold'] = gym.spaces.Discrete(max_action)
         legal_actions['check'] = gym.spaces.Discrete(max_action)
         legal_actions['call'] = gym.spaces.Discrete(max_action)
-        n_splits = len(self.splits)
+        n_splits = len(self.state.splits)
         for i in range(n_splits):
             legal_actions[f'raise_{i+1}'] = gym.spaces.Discrete(max_action)
         legal_actions['push'] = gym.spaces.Discrete(max_action)
@@ -460,17 +457,19 @@ class BropokerEnv(gym.Env):
         out = gym.spaces.Dict(
             {
                 "action": gym.spaces.Discrete(max_action),
-                "alive": gym.spaces.MultiBinary(self.n_players),
-                "button": gym.spaces.Discrete(self.n_players),
+                "alive": gym.spaces.MultiBinary(self.state.n_players),
+                "button": gym.spaces.Discrete(self.state.n_players),
                 "call": gym.spaces.Discrete(max_action),
                 "board_cards": gym.spaces.Tuple((card_space,) * n_board_cards),
-                "hole_cards": gym.spaces.Tuple((hole_card_space,) * self.n_players),
+                "hole_cards": gym.spaces.Tuple((hole_card_space,) * self.state.n_players),
                 "max_raise": gym.spaces.Discrete(max_action),
                 "min_raise": gym.spaces.Discrete(max_action),
                 "pot": gym.spaces.Discrete(max_action),
-                "stacks": gym.spaces.Tuple((gym.spaces.Discrete(max_action),) * self.n_players),
+                "stacks": gym.spaces.Tuple(
+                    (gym.spaces.Discrete(max_action),) * self.state.n_players
+                ),
                 "street_commits": gym.spaces.Tuple(
-                    (gym.spaces.Discrete(max_action),) * self.n_players
+                    (gym.spaces.Discrete(max_action),) * self.state.n_players
                 ),
                 "legal_action": gym.spaces.Dict(legal_actions)
             }
@@ -479,5 +478,6 @@ class BropokerEnv(gym.Env):
 
     @property
     def action_space(self):
+        max_action = sum(self.state.stacks)
         return gym.spaces.Discrete(max_action)
 
