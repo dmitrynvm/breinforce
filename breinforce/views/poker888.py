@@ -52,7 +52,7 @@ def verb(action_type, i):
         out += 'calls'
     elif 'check' in action_type:
         out += 'checks'
-    elif 'raise' in action_type or 'all_in' in action_type:
+    elif 'raise' in action_type or 'allin' in action_type:
         if i:
             out += 'raises'
         else:
@@ -81,8 +81,8 @@ def preflop(history):
 
 def flop(history):
     history = select(history, 1)
-    board_cards = history[0].state.board_cards
-    out = f'** FLOP ** {board_cards}\n'
+    community_cards = history[0].state.community_cards
+    out = f'** FLOP ** {community_cards}\n'
     for i, episode in enumerate(history):
         state = episode.state
         action = episode.action
@@ -98,8 +98,8 @@ def flop(history):
 
 def turn(history):
     history = select(history, 2)
-    board_cards = history[0].state.board_cards[-1:]
-    out = f'** TURN ** {board_cards}\n'
+    community_cards = history[0].state.community_cards[-1:]
+    out = f'** TURN ** {community_cards}\n'
     for i, episode in enumerate(history):
         state = episode.state
         action = episode.action
@@ -115,8 +115,8 @@ def turn(history):
 
 def river(history):
     history = select(history, 3)
-    board_cards = history[0].state.board_cards[-1:]
-    out = f'** RIVER ** {board_cards}\n'
+    community_cards = history[0].state.community_cards[-1:]
+    out = f'** RIVER ** {community_cards}\n'
     for i, episode in enumerate(history):
         state = episode.state
         action = episode.action
@@ -134,7 +134,6 @@ def summary(history):
     state = history[-1].state
     hole_cards = state.hole_cards
     payouts = state.payouts
-    print(payouts)
     out = '** SUMMARY **\n'
     return out
 
@@ -144,7 +143,6 @@ def render(history):
     out = ''
     state = history[0].state
     street = state.street
-    print(street)
     out += header(state)
     out += preflop(history)
     if street > 0:

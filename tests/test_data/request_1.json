@@ -1,0 +1,112 @@
+{
+    "round_state":
+    {
+        "dealer_btn": 2,
+        "big_blind_pos": 5,
+        "straddle_pos": 6,
+        "small_blind_amount": 2,
+        "street": "preflop",
+        "community_card": [],
+        "seats": [
+            {
+            "stack": 908,
+            "state": "participating",
+            "name": "小七5",
+            "uuid": "小七5"
+            },
+            {
+                "stack": 386,
+                "state": "participating",
+                "name": "大家请叫我",
+                "uuid": "大家请叫我"
+            },
+            {
+                "stack": 959,
+                "state": "participating",
+                "name": "思味无知知",
+                "uuid": "思味无知知"
+            },
+            {
+                "stack": 0,
+                "state": "not participating",
+                "name": "user_3",
+                "uuid": "user_3"
+            },
+            {
+                "stack": 489,
+                "state": "participating",
+                "name": "睡觉鱼",
+                "uuid": "睡觉鱼"
+            },
+            {
+                "stack": 1435,
+                "state": "participating",
+                "name": "夏天蝴蝶",
+                "uuid": "夏天蝴蝶"
+            },
+            {
+                "stack": 488,
+                "state": "participating",
+                "name": "海里漂",
+                "uuid": "海里漂"
+            },
+            {
+                "stack": 935,
+                "state": "participating",
+                "name": "ME",
+                "uuid": "ME"
+            }],
+            "pot":
+            {
+                "main":
+                {
+                    "amount": 397
+                }
+            },
+            "action_histories":
+            {
+                "preflop": [
+                    {
+                        "action": "small_blind",
+                        "amount": 2,
+                        "name": "睡觉鱼",
+                        "add_amount": 2,
+                        "uuid": "睡觉鱼"
+                    },
+                    {
+                        "action": "straddle",
+                        "amount": 8,
+                        "name": "夏天蝴蝶",
+                        "add_amount": 6,
+                        "uuid": "夏天蝴蝶"
+                    },
+                    {
+                        "action": "fold",
+                        "amount": 0,
+                        "name": "海里漂",
+                        "add_amount": 0,
+                        "uuid": "海里漂"
+                    }
+                ]
+            }
+        },
+        "hole_card": ["H7", "D8"],
+        "valid_actions": [
+            {
+                "action": "fold",
+                "amount": 0
+            },
+            {
+                "action": "call",
+                "amount": 8
+            },
+            {
+                "action": "raise",
+                "amount": {
+                    "min": 14.4,
+                    "max": 935
+                }
+            }
+        ]
+    }
+}

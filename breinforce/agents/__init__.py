@@ -1,12 +1,14 @@
 from .base_agent import BaseAgent
-from .kuhn_agent import KuhnAgent
+from .split_agent import SplitAgent
 from .random_agent import RandomAgent
-from .ruleb_agent import RulebAgent
+from .rulebased_agent import RuleBasedAgent
+from .dqn_agent import DQNAgent
 
 
 __all__ = [
-    "BaseAgent",
-    "KuhnAgent",
-    "RandomAgent",
-    "RulebAgent"
+    'BaseAgent',
+    'SplitAgent',
+    'RandomAgent',
+    'RuleBasedAgent',
+    'DQNAgent'
 ]

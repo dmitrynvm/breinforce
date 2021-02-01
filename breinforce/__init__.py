@@ -1,5 +1,5 @@
-from breinforce import agents, envs, views, utils
+from breinforce import agents, core, envs, views
 
-__all__ = ["agents", "config", "envs", "views", "utils"]
+__all__ = ['agents', 'core', 'envs', 'views']
 
-utils.configure()
+core.utils.configure()

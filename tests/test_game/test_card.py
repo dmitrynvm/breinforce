@@ -1,25 +1,23 @@
 import random
 import pytest
-from breinforce import errors
+from breinforce.core import errors
 from breinforce.games.bropoker import Card
 
 
-def test_invalid_init():
-    with pytest.raises(errors.InvalidRankError):
-        Card("1s")
-    with pytest.raises(errors.InvalidRankError):
-        Card("1t")
-
 def test_ops():
-    card = Card("Ac")
+    card = Card('Ac')
     assert card & card
     assert card & card.value
     assert card | card
-    assert card | card.value
-    assert card << 0 == card.value
-    assert card.value << 0 == card.value
-    assert card >> 0 == card.value
-    assert card.value >> 0 == card.value
-    with pytest.raises(NotImplementedError):
-        assert card == 0
 
+
+def test_init():
+    card1 = Card('Ac')
+    card2 = Card('ac')
+    card3 = Card('ca')
+    card4 = Card('Ca')
+    card5 = Card('cA')
+    card6 = Card('CA')
+
+    assert card1 == card2 == card3 == \
+        card4 == card5 == card6

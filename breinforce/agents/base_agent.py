@@ -1,8 +1,8 @@
 
-class BaseAgent:
+class BaseAgent(object):
 
     def __init__(self):
         pass
 
-    def act(self, obs):
+    def predict(self, obs):
         raise NotImplementedError()

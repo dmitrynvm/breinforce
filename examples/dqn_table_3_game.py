@@ -18,7 +18,7 @@ from tqdm import tqdm
 from time import sleep
 
 np.random.seed(1)
-pd.options.plotting.backend = "plotly"
+pd.options.plotting.backend = 'plotly'
 
 Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward'))
 
@@ -33,7 +33,7 @@ def encode_data(df):
         'Q♠', 'Q♣', 'Q♥', 'Q♦', 'T♠', 'T♣', 'T♥', 'T♦'
     ]
 
-    card_encoder = OneHotEncoder(handle_unknown="ignore", sparse=False)
+    card_encoder = OneHotEncoder(handle_unknown='ignore', sparse=False)
     card_encoder.fit(np.array(all_cards).reshape(-1, 1))
     card_columns = [
         'board_1', 'board_2', 'board_3', 'board_4', 'board_5', 'hole_1', 'hole_2'
@@ -60,11 +60,11 @@ def encode_data(df):
 
 
 def encode_obs(obs):
-    board_cards = obs['board_cards'] + ['--' for i in range(5-len(obs['board_cards']))]
+    community_cards = obs['community_cards'] + ['--' for i in range(5-len(obs['community_cards']))]
     hole_cards = obs['hole_cards']
     state_vector = [obs['player']] + list(obs['alive']) + \
                 [obs['button'], obs['call'], obs['max_raise'], obs['min_raise'], obs['pot']] + list(obs['stacks']) + list(obs['commits']) + \
-                    board_cards + hole_cards
+                    community_cards + hole_cards
 
     input_df = pd.DataFrame([state_vector[1:]], columns=[f'alive_{i}' for i in range(6)] +
                                         ['button', 'call', 'max_raise', 'min_raise', 'pot'] +
@@ -111,7 +111,7 @@ def get_current(policy_nn, states, actions):
 
 
 def get_next(target_nn, next_states):
-    device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     final_state_locations = next_states.flatten(start_dim=1).max(dim=1)[0].eq(0).type(torch.bool)
     non_final_state_locations = (final_state_locations == False)
     non_final_states = next_states[non_final_state_locations]
@@ -177,10 +177,10 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 1000
-    n_episodes = 100
+    n_epochs = 3
+    n_episodes = 5
 
-    utils.configure()
+    core.utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     memory = SequentialMemory(memory_size)
 
@@ -189,8 +189,8 @@ def learn(agent, policy_nn, target_nn):
     hist = ''
     wrate = []
     stacks = []
-    wins = np.array([0, 0, 0, 0, 0, 0], dtype="int")
-    total = np.array([0, 0, 0, 0, 0, 0], dtype="int")
+    wins = np.array([0, 0, 0, 0, 0, 0], dtype='int')
+    total = np.array([0, 0, 0, 0, 0, 0], dtype='int')
     print('Learning on Table 1 (DQN, MLP with 5 layers)')
     pbar = tqdm(total=n_epochs * n_episodes)
     for epoch in range(n_epochs):
@@ -199,44 +199,40 @@ def learn(agent, policy_nn, target_nn):
             pbar.update(1)
             env = gym.make('CustomSixPlayer-v0')
             probs = [0.0, 0.2, 0.2, 0.2, 0.2, 0.2]
-            players = [agents.RulebAgent(probs)] * 5 + [agents.BaseAgent()]
+            players = [agents.BaseAgent()] * 6
             env.register(players)
             obs = env.reset()
             step = 0
 
             while True:
                 step += 1
-                if obs['player'] < 5:
-                    action = env.act(obs)
-                    obs, rewards, done, info = env.step(action)
-                    enc_obs = encode_obs(obs)
+                enc_obs = encode_obs(obs)
+                action = agent.predict(enc_obs.float(), policy_nn)
+                player_id = obs['player']
+                action_type = action#.numpy()[0]
+                if action_type == 0:
+                    action_sum = -1
+                elif action_type == 5:
+                    action_sum = obs['stacks'][obs['player']]
+                elif action_type == 1:
+                    action_sum = obs['call']
                 else:
-                    action = agent.predict(enc_obs.float(), policy_nn)
-                    player_id = obs['player']
-                    action_type = action#.numpy()[0]
-                    if action_type == 0:
-                        action_sum = -1
-                    elif action_type == 5:
-                        action_sum = obs['stacks'][obs['player']]
-                    elif action_type == 1:
-                        action_sum = obs['call']
-                    else:
-                        action_sum = 100#fracs[action_type] * obs['pot']
+                    action_sum = 100#splits[action_type] * obs['pot']
 
-                    obs, rewards, done, info = env.step(action_sum)
-                    reward = torch.from_numpy(np.array(rewards[player_id]))
-                    next_enc_obs = encode_obs(obs)
-                    memory.add(Experience(enc_obs.float(), action, next_enc_obs.float(), reward))
+                obs, rewards, done, info = env.step(action_sum)
+                reward = torch.from_numpy(np.array(rewards[player_id]))
+                next_enc_obs = encode_obs(obs)
+                memory.add(Experience(enc_obs.float(), action, next_enc_obs.float(), reward))
 
-                    if memory.ready(batch_size):
-                        states, actions, rewards, next_states = memory.sample(batch_size)
-                        current_q_values = get_current(policy_nn, states, actions)
-                        next_q_values = get_next(target_nn, next_states)
-                        target_q_values = (next_q_values * gamma) + rewards
-                        loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
-                        optimizer.zero_grad()
-                        loss.backward()
-                        optimizer.step()
+                if memory.ready(batch_size):
+                    states, actions, rewards, next_states = memory.sample(batch_size)
+                    current_q_values = get_current(policy_nn, states, actions)
+                    next_q_values = get_next(target_nn, next_states)
+                    target_q_values = (next_q_values * gamma) + rewards
+                    loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
 
                 if all(done):
                     break
@@ -244,11 +240,12 @@ def learn(agent, policy_nn, target_nn):
             if episode % target_update == 0:
                 target_nn.load_state_dict(policy_nn.state_dict())
 
-            hist += env.render() + "\n\n"
+            hist += env.render() + '\n\n'
             for item in env.history:
                 state, action, reward, info = item
                 stacks.append(state['stacks'])
-            pays = np.array(env.payouts, dtype="int")
+
+            pays = np.array(env.payouts, dtype='int')
             player = np.argmax(pays)
             epoch_wrate += pays
             wins[player] += 1
@@ -258,27 +255,26 @@ def learn(agent, policy_nn, target_nn):
     pbar.close()
 
     wrate = np.array(wrate).T
-    df_wrate = pd.DataFrame(data=wrate, dtype="int")
-    df_wrate["wins"] = pd.DataFrame(wins)
-    df_wrate["$/100"] = pd.DataFrame(total / (n_epochs * n_episodes)).round()
-    df_wrate["bb/100"] = pd.DataFrame(total / (n_epochs * n_episodes * env.big_blind)).round()
-    df_wrate["total"] = pd.DataFrame(total)
-    df_wrate.to_csv("results/wrates.csv")
+    df_wrate = pd.DataFrame(data=wrate, dtype='int')
+    df_wrate['wins'] = pd.DataFrame(wins)
+    df_wrate['$/100'] = pd.DataFrame(total / (n_epochs * n_episodes)).round()
+    df_wrate['bb/100'] = pd.DataFrame(total / (n_epochs * n_episodes * env.big_blind)).round()
+    df_wrate['total'] = pd.DataFrame(total)
+    df_wrate.to_csv('results/wrates.csv')
 
-    with open("results/wrates.txt", "w") as f:
-        f.write(tabulate(df_wrate, tablefmt="grid", headers="keys"))
+    with open('results/wrates.txt', 'w') as f:
+        f.write(tabulate(df_wrate, tablefmt='grid', headers='keys'))
 
-    df_stacks = pd.DataFrame(data=np.array(stacks).T, dtype="int")
-    df_stacks.to_csv("results/stacks.csv")
+    df_stacks = pd.DataFrame(data=np.array(stacks).T, dtype='int')
+    df_stacks.to_csv('results/stacks.csv')
 
-    with open("results/stacks.txt", "w") as f:
-        f.write(tabulate(df_stacks, tablefmt="grid", headers="keys"))
+    with open('results/stacks.txt', 'w') as f:
+        f.write(tabulate(df_stacks, tablefmt='grid', headers='keys'))
 
-    with open("results/history.txt", "w") as f:
+    with open('results/history.txt', 'w') as f:
         f.write(hist)
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     eps_start = 1
     eps_stop = 0.01
     eps_decay = 0.001
@@ -288,6 +284,7 @@ if __name__ == "__main__":
     policy_nn = DQNetwork(387).to(device)
     target_nn = DQNetwork(387).to(device)
     target_nn.load_state_dict(policy_nn.state_dict())
+    #target_nn.eval()
     os.makedirs('results', exist_ok=True)
     torch.save(policy_nn.state_dict(), 'results/policy_nn.pt')
     torch.save(target_nn.state_dict(), 'results/target_nn.pt')

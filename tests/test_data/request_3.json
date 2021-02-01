@@ -1,0 +1,90 @@
+{
+    "round_state": {
+        "dealer_btn": 4,
+        "big_blind_pos": 6,
+        "straddle_pos": 0,
+        "small_blind_amount": 1,
+        "street": "preflop",
+        "community_card": [],
+        "seats": [
+            {
+                "stack": 201,
+                "state": "participating",
+                "name": "agent_1",
+                "uuid": "agent_1"
+            },
+            {
+                "stack": 202,
+                "state": "participating",
+                "name": "agent_2",
+                "uuid": "agent_2"
+            },
+            {
+                "stack": 203,
+                "state": "participating",
+                "name": "agent_3",
+                "uuid": "agent_3"
+            },
+            {
+                "stack": 204,
+                "state": "participating",
+                "name": "agent_4",
+                "uuid": "agent_4"
+            },
+            {
+                "stack": 205,
+                "state": "participating",
+                "name": "agent_5",
+                "uuid": "agent_5"
+            },
+            {
+                "stack": 206,
+                "state": "participating",
+                "name": "agent_6",
+                "uuid": "agent_6"
+            }
+        ],
+        "pot": {
+            "main":
+                {
+                    "amount": 14
+                }
+        },
+        "action_histories": {
+            "preflop": [
+                {
+                    "action": "straddle",
+                    "amount": 4,
+                    "name": "现实点好饿",
+                    "add_amount": 4,
+                    "uuid": "现实点好饿"
+                },
+                {
+                    "action": "call",
+                    "amount": 4,
+                    "name": "挑聘左",
+                    "add_amount": 0,
+                    "uuid": "挑聘左"
+                }
+            ]
+        }
+    },
+    "hole_card": ["HJ", "S6"],
+    "valid_actions": [
+        {
+            "action": "fold",
+            "amount": 0
+        },
+        {
+            "action": "call",
+            "amount": 4
+        },
+        {
+            "action": "raise",
+            "amount": {
+                "min": 7.2,
+                "max": 228
+            }
+        }
+    ]
+}

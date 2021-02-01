@@ -2,10 +2,10 @@ from stable_baselines import PPO2
 from stable_baselines.gail import ExpertDataset
 # Using only one expert trajectory
 # you can specify `traj_limitation=-1` for using the whole dataset
-dataset = ExpertDataset(expert_path="expert_cartpole.npz",
+dataset = ExpertDataset(expert_path='expert_cartpole.npz',
                         traj_limitation=1, batch_size=128)
 
-model = PPO2("MlpPolicy", "CartPole-v1", verbose=1)
+model = PPO2('MlpPolicy', 'CartPole-v1', verbose=1)
 # Pretrain the PPO2 model
 model.pretrain(dataset, n_epochs=1000)
 
@@ -23,7 +23,6 @@ for _ in range(1000):
     reward_sum += reward
     env.render()
     if done:
-        print(reward_sum)
         reward_sum = 0.0
         obs = env.reset()
 

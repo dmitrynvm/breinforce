@@ -9,7 +9,6 @@ random_x = np.linspace(0, 1, N)
 random_y0 = np.random.randn(N) + 5
 random_y1 = np.random.randn(N)
 random_y2 = np.random.randn(N) - 5
-print(random_x)
 
 # Create traces
 fig = go.Figure()

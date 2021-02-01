@@ -1,8 +1,7 @@
-from . import base_view
-from . import ascii_view
-from . import hands_view
-from . import poker888_view
+from .base_view import BaseView
+from . import pokerstars
 
 __all__ = [
-    "poker888_view"
+    'BaseView',
+    'pokerstars'
 ]

@@ -1,10 +1,10 @@
-"""Classes and functions to evaluate poker hands"""
+'''Classes and functions to evaluate poker hands'''
 
 import itertools
 import functools
 import operator
 from typing import List
-from breinforce import errors
+from breinforce.core import errors
 from .card import Card
 
 
@@ -29,7 +29,7 @@ def ncr(n, r):
 
 
 def prime_product_from_rankbits(rankbits: int) -> int:
-    """Computes prime product from rankbits of cards, primarily used
+    '''Computes prime product from rankbits of cards, primarily used
     for evaluating flushes and straights. Expects 13 bit integer
     with bits of the cards in the hand flipped.
 
@@ -42,7 +42,7 @@ def prime_product_from_rankbits(rankbits: int) -> int:
     -------
     int
         prime product of rank cards
-    """
+    '''
 
     product = 1
     for i in Card.INT_RANKS:
@@ -53,7 +53,7 @@ def prime_product_from_rankbits(rankbits: int) -> int:
 
 
 def prime_product_from_hand(cards: List[Card]) -> int:
-    """Computes unique prime product for a list of cards. Used for
+    '''Computes unique prime product for a list of cards. Used for
     evaluating hands
 
     Parameters
@@ -65,7 +65,7 @@ def prime_product_from_hand(cards: List[Card]) -> int:
     -------
     int
         prime product of cards
-    """
+    '''
 
     product = 1
     for card in cards:
@@ -75,7 +75,7 @@ def prime_product_from_hand(cards: List[Card]) -> int:
 
 
 class HashMap:
-    """Hash maps that transforms unique prime product of hands to unique
+    '''Hash maps that transforms unique prime product of hands to unique
     integer hand rank. The lower the rank the better the hand
 
     Parameters
@@ -92,9 +92,9 @@ class HashMap:
     order : List[str], optional
         custom hand rank order, if None hands are ranked by rarity, by
         default None
-    """
+    '''
 
-    ORDER_STRINGS = ["sf", "fk", "fh", "fl", "st", "tk", "tp", "pa", "hc"]
+    ORDER_STRINGS = ['sf', 'fk', 'fh', 'fl', 'st', 'tk', 'tp', 'pa', 'hc']
 
     def __init__(
         self,
@@ -109,9 +109,9 @@ class HashMap:
             if any(string not in order for string in self.ORDER_STRINGS):
                 raise errors.InvalidOrderError(
                     (
-                        f"invalid order list {order},"
-                        f"order list must be permutation \
-                        of {self.ORDER_STRINGS}"
+                        f'invalid order list {order},'
+                        f'order list must be permutation \
+                        of {self.ORDER_STRINGS}'
                     )
                 )
 
@@ -140,37 +140,37 @@ class HashMap:
         )
 
         self.hand_dict = {
-            "straight flush": {
-                "suited": straight_flushes,
-                "unsuited": u_straight_flushes,
+            'straight flush': {
+                'suited': straight_flushes,
+                'unsuited': u_straight_flushes,
             },
-            "four of a kind": {
-                "suited": four_of_a_kinds,
-                "unsuited": u_four_of_a_kinds,
+            'four of a kind': {
+                'suited': four_of_a_kinds,
+                'unsuited': u_four_of_a_kinds,
             },
-            "full house": {"suited": full_houses, "unsuited": u_full_houses},
-            "flush": {"suited": flushes, "unsuited": u_flushes},
-            "straight": {"suited": straights, "unsuited": u_straights},
-            "three of a kind": {
-                "suited": three_of_a_kinds,
-                "unsuited": u_three_of_a_kinds,
+            'full house': {'suited': full_houses, 'unsuited': u_full_houses},
+            'flush': {'suited': flushes, 'unsuited': u_flushes},
+            'straight': {'suited': straights, 'unsuited': u_straights},
+            'three of a kind': {
+                'suited': three_of_a_kinds,
+                'unsuited': u_three_of_a_kinds,
             },
-            "two pair": {"suited": two_pairs, "unsuited": u_two_pairs},
-            "pair": {"suited": pairs, "unsuited": u_pairs},
-            "high card": {"suited": high_cards, "unsuited": u_high_cards},
+            'two pair': {'suited': two_pairs, 'unsuited': u_two_pairs},
+            'pair': {'suited': pairs, 'unsuited': u_pairs},
+            'high card': {'suited': high_cards, 'unsuited': u_high_cards},
         }
 
         # suited hands
         s_hands = [
-            (straight_flushes, "straight flush"),
-            (four_of_a_kinds, "four of a kind"),
-            (full_houses, "full house"),
-            (flushes, "flush"),
-            (straights, "straight"),
-            (three_of_a_kinds, "three of a kind"),
-            (two_pairs, "two pair"),
-            (pairs, "pair"),
-            (high_cards, "high card"),
+            (straight_flushes, 'straight flush'),
+            (four_of_a_kinds, 'four of a kind'),
+            (full_houses, 'full house'),
+            (flushes, 'flush'),
+            (straights, 'straight'),
+            (three_of_a_kinds, 'three of a kind'),
+            (two_pairs, 'two pair'),
+            (pairs, 'pair'),
+            (high_cards, 'high card'),
         ]
 
         # sort suited hands and rank unsuited hands by suited
@@ -183,7 +183,7 @@ class HashMap:
         # lookup is done on unsuited hands but hand
         # rank is dependent on suited hands
         u_hands = [
-            (self.hand_dict[uh[1]]["unsuited"], uh[1]) for uh in s_hands
+            (self.hand_dict[uh[1]]['unsuited'], uh[1]) for uh in s_hands
         ]
 
         # compute cumulative number of unsuited hands for each hand
@@ -194,9 +194,9 @@ class HashMap:
         for u_hand in u_hands:
             hand_rank = u_hand[1]
             cumulative_hands += u_hand[0]
-            self.hand_dict[hand_rank]["cumulative unsuited"] = cumulative_hands
+            self.hand_dict[hand_rank]['cumulative unsuited'] = cumulative_hands
             if cumulative_hands > 0:
-                self.hand_dict[hand_rank]["rank"] = rank
+                self.hand_dict[hand_rank]['rank'] = rank
                 rank += 1
                 ranked_hands.append(hand_rank)
         self.max_rank = cumulative_hands
@@ -210,13 +210,13 @@ class HashMap:
         self.__flushes(ranks, cards_for_hand, low_end_straight)
         self.__multiples(ranks, cards_for_hand)
 
-        # if suited hands aren"t relevant set the suited
+        # if suited hands aren't relevant set the suited
         # lookup table equal to the unsuited table
-        if not self.hand_dict["flush"]["cumulative unsuited"]:
+        if not self.hand_dict['flush']['cumulative unsuited']:
             self.suited_lookup = self.unsuited_lookup
 
     def lookup(self, cards: List[Card]) -> int:
-        """Return unique hand rank for list of cards
+        '''Return unique hand rank for list of cards
 
         Parameters
         ----------
@@ -227,7 +227,7 @@ class HashMap:
         -------
         int
             hand rank
-        """
+        '''
         # if all flush bits equal then use flush lookup
         if functools.reduce(operator.and_, cards, 0xF000):
             hand_or = functools.reduce(operator.or_, cards) >> 16
@@ -371,7 +371,7 @@ class HashMap:
 
         # start with best straight (flush)
         # for 5 card hand with 13 ranks: 0b1111100000000
-        bin_n_str = "0b" + "1" * cards_for_hand + "0" * (13 - cards_for_hand)
+        bin_n_str = '0b' + '1' * cards_for_hand + '0' * (13 - cards_for_hand)
         # remove one 0 for every straight (flush)
         for _ in range(ranks - (cards_for_hand - 1)):
             straight_flushes.append(int(bin_n_str, 2))
@@ -379,10 +379,10 @@ class HashMap:
         if low_end_straight:
             # add low end straight
             bin_n_str = (
-                "0b1"
-                + "0" * (ranks - cards_for_hand)
-                + "1" * (cards_for_hand - 1)
-                + "0" * (13 - ranks)
+                '0b1'
+                + '0' * (ranks - cards_for_hand)
+                + '1' * (cards_for_hand - 1)
+                + '0' * (13 - ranks)
             )
             straight_flushes.append(int(bin_n_str, 2))
 
@@ -393,7 +393,7 @@ class HashMap:
         flushes = []
         # start with lowest non pair hand
         # for 5 card hand with 13 ranks: 0b11111
-        bin_n_str = "0b" + ("1" * cards_for_hand)
+        bin_n_str = '0b' + ('1' * cards_for_hand)
         gen = lexographic_next_bit(int(bin_n_str, 2))
         # iterate over all possibilities of unique hands
         for _ in range(int(ncr(ranks, cards_for_hand))):
@@ -409,8 +409,8 @@ class HashMap:
     def __flushes(self, ranks, cards_for_hand, low_end_straight):
         straight_flushes = []
         if (
-            self.hand_dict["straight flush"]["cumulative unsuited"]
-            or self.hand_dict["straight"]["cumulative unsuited"]
+            self.hand_dict['straight flush']['cumulative unsuited']
+            or self.hand_dict['straight']['cumulative unsuited']
         ):
             straight_flushes = self.__gen_straight_flush(
                 cards_for_hand, ranks, low_end_straight
@@ -420,16 +420,16 @@ class HashMap:
         # flushes (including straight flushes)
         flushes = []
         if (
-            self.hand_dict["flush"]["cumulative unsuited"]
-            or self.hand_dict["high card"]["cumulative unsuited"]
+            self.hand_dict['flush']['cumulative unsuited']
+            or self.hand_dict['high card']['cumulative unsuited']
         ):
             flushes = self.__gen_flush(cards_for_hand, ranks, straight_flushes)
 
         def add_to_map(rank_string, rank_bits, suited):
-            if not self.hand_dict[rank_string]["cumulative unsuited"]:
+            if not self.hand_dict[rank_string]['cumulative unsuited']:
                 return
             n_ranks = len(rank_bits)
-            assert n_ranks == self.hand_dict[rank_string]["unsuited"]
+            assert n_ranks == self.hand_dict[rank_string]['unsuited']
             hand_rank = self.__get_rank(rank_string)
             for rank_bit in rank_bits:
                 prime_product = prime_product_from_rankbits(rank_bit)
@@ -439,16 +439,16 @@ class HashMap:
                     self.unsuited_lookup[prime_product] = hand_rank
                 hand_rank += 1
 
-        add_to_map("straight flush", straight_flushes, True)
-        add_to_map("flush", flushes, True)
-        add_to_map("straight", straight_flushes, False)
-        add_to_map("high card", flushes, False)
+        add_to_map('straight flush', straight_flushes, True)
+        add_to_map('flush', flushes, True)
+        add_to_map('straight', straight_flushes, False)
+        add_to_map('high card', flushes, False)
 
     def __multiples(self, ranks, cards_for_hand):
         def add_to_map(rank_string, multiples):
             # inverse ranks, A - 2
             backwards_ranks = list(range(13 - 1, 13 - 1 - ranks, -1))
-            if not self.hand_dict[rank_string]["cumulative unsuited"]:
+            if not self.hand_dict[rank_string]['cumulative unsuited']:
                 return
             # get cumulative hand rank
             hand_rank = self.__get_rank(rank_string)
@@ -490,25 +490,25 @@ class HashMap:
                     hand_rank += 1
             # check hand rank is equal to number of iterated ranks
             n_ranks = hand_rank - self.__get_rank(rank_string)
-            assert n_ranks == self.hand_dict[rank_string]["unsuited"]
+            assert n_ranks == self.hand_dict[rank_string]['unsuited']
 
-        add_to_map("four of a kind", [4])
-        add_to_map("full house", [3, 2])
-        add_to_map("three of a kind", [3])
-        add_to_map("two pair", [2, 2])
-        add_to_map("pair", [2])
+        add_to_map('four of a kind', [4])
+        add_to_map('full house', [3, 2])
+        add_to_map('three of a kind', [3])
+        add_to_map('two pair', [2, 2])
+        add_to_map('pair', [2])
 
     def __get_rank(self, hand):
-        rank = self.hand_dict[hand]["rank"]
+        rank = self.hand_dict[hand]['rank']
         if not rank:
             return 0
         better_hand = self.ranked_hands[rank - 1]
-        return self.hand_dict[better_hand]["cumulative unsuited"] + 1
+        return self.hand_dict[better_hand]['cumulative unsuited'] + 1
 
 
 
 class Judge(object):
-    """Evalutes poker hands using hole and board cards
+    '''Evalutes poker hands using hole and board cards
 
     Parameters
     ----------
@@ -523,9 +523,9 @@ class Judge(object):
         default True
     order : list, optional
         optional custom order of hand ranks, must be permutation of
-        ["sf", "fk", "fh", "fl", "st", "tk", "tp", "pa", "hc"]. if
+        ['sf', 'fk', 'fh', 'fl', 'st', 'tk', 'tp', 'pa', 'hc']. if
         order=None, hands are ranked by rarity. by default None
-    """
+    '''
 
     def __init__(
             self,
@@ -549,18 +549,18 @@ class Judge(object):
 
         hand_dict = self.hashmap.hand_dict
         total = sum(
-            hand_dict[hand]["suited"]
+            hand_dict[hand]['suited']
             for hand in self.hashmap.ranked_hands
         )
 
         hands = [
-            "{} ({:.4%})".format(hand, hand_dict[hand]["suited"] / total)
+            '{} ({:.4%})'.format(hand, hand_dict[hand]['suited'] / total)
             for hand in self.hashmap.ranked_hands
         ]
-        self.hand_ranks = " > ".join(hands)
+        self.hand_ranks = ' > '.join(hands)
 
-    def evaluate(self, hole_cards, board_cards) -> int:
-        """Evaluates the hand rank of a poker hand from a list of hole
+    def evaluate(self, hole_cards, community_cards) -> int:
+        '''Evaluates the hand rank of a poker hand from a list of hole
         and a list of board cards. Empty hole and board cards
         are supported as well as requiring a minimum number of hole
         cards to be used.
@@ -569,17 +569,17 @@ class Judge(object):
         ----------
         hole_cards : List[Card]
             list of hole cards
-        board_cards : List[Card]
+        community_cards : List[Card]
             list of board cards
 
         Returns
         -------
         int
             hand rank
-        """
+        '''
         all_card_combs = list(
             itertools.combinations(
-                hole_cards + board_cards, self.cards_for_hand
+                hole_cards + community_cards, self.cards_for_hand
             )
         )
 
@@ -592,7 +592,7 @@ class Judge(object):
         return minimum
 
     def get_rank_class(self, hand_rank: int) -> str:
-        """Outputs hand rank string from integer hand rank
+        '''Outputs hand rank string from integer hand rank
 
         Parameters
         ----------
@@ -603,14 +603,14 @@ class Judge(object):
         -------
         str
             hand rank string
-        """
+        '''
         hand_dict = self.hashmap.hand_dict
         for hand in self.hashmap.ranked_hands:
-            if hand_rank <= hand_dict[hand]["cumulative unsuited"]:
+            if hand_rank <= hand_dict[hand]['cumulative unsuited']:
                 return hand
         raise errors.InvalidHandRankError(
             (
-                f"invalid hand rank, expected 0 <= hand_rank"
-                f" <= {self.hashmap.max_rank}, got {hand_rank}"
+                f'invalid hand rank, expected 0 <= hand_rank'
+                f' <= {self.hashmap.max_rank}, got {hand_rank}'
             )
         )
