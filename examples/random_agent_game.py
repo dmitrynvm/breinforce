@@ -16,4 +16,4 @@ while True:
     if all(done):
         break
 
-print(env.render('jsonify'))
+print(env.render('pokerstars'))

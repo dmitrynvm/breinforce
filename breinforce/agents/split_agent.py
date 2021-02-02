@@ -12,9 +12,8 @@ class SplitAgent(BaseAgent):
         valid_actions = obs['valid_actions']
         out = {}
         out['fold'] = valid_actions['fold']
-        out['call'] = valid_actions['call']
-        if 'check' in valid_actions:
-            out['check'] = valid_actions['check']
+        if 'call' in valid_actions:
+            out['call'] = valid_actions['call']
         if 'raise' in valid_actions:
             raises = {}
             raise_min = obs['valid_actions']['raise']['min']

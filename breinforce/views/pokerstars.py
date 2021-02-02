@@ -194,15 +194,17 @@ def get_results(state):
     return items
 
 
-def render(env):
+def render(history):
     '''Render representation based on the table configuration
     '''
     out = ''
+    '''
     out += header(env.history)
     out += preflop(env.history)
     out += flop(env.history)
     out += turn(env.history)
     out += river(env.history)
     out += summary(env.state)
+    '''
     return out
 

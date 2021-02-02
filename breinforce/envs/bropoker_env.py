@@ -123,7 +123,7 @@ def get_agreed(state):
     return acted + empty + pushed + folded
 
 
-def get_payouts(state) -> np.ndarray:
+def get_payouts(state):
     # players that have folded lose their actions
     payouts = -1 * state.contribs * np.logical_not(state.alive)
     if sum(state.alive) == 1:
@@ -148,7 +148,10 @@ def get_valid_actions(state):
     out['fold'] = 0
     if not np.any(get_allin(state)):
         out['call'] = call
-        out['raise'] = {'min': min_raise, 'max': max_raise}
+        out['raise'] = {
+            'min': min_raise,
+            'max': max_raise
+        }
     out['allin'] = max_raise
     return Dict(out)
 
