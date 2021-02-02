@@ -145,10 +145,8 @@ def get_valid_actions(state):
     max_raise = get_max_raise(state)
     #print(call, min_raise, max_raise)
     out = {}
-    out['fold'] = -1
+    out['fold'] = 0
     if not np.any(get_allin(state)):
-        if not call:
-            out['check'] = 0
         out['call'] = call
         out['raise'] = {'min': min_raise, 'max': max_raise}
     out['allin'] = max_raise
@@ -163,9 +161,6 @@ def get_observation(state):
         'button': state.button,
         'player': state.player,
         'pot': state.pot,
-        'call': get_call(state),
-        'max_raise': get_max_raise(state),
-        'min_raise': get_min_raise(state),
         'community_cards': community_cards,
         'hole_cards': hole_cards[state.player],
         'alive': state.alive.tolist(),
