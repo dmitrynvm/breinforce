@@ -400,8 +400,8 @@ class BropokerEnv(gym.Env):
     def reset(self):
         self.state = create_state(self.config)
         self.history = []
-        episode = Episode(self.state.deepcopy(), None, None, None)
-        self.history += [episode]
+        #episode = Episode(self.state.deepcopy(), None, None, None)
+        #self.history += [episode]
         return get_observation(self.state)
 
     def step(self, action):
@@ -413,7 +413,7 @@ class BropokerEnv(gym.Env):
     def render(self, mode='pokerstars'):
         out = None
         if mode == 'pokerstars':
-            out = views.pokerstars.render(self)
+            out = views.pokerstars.render(self.history)
         elif mode == 'jsonify':
             out = views.jsonify.render(self.history)
         return out

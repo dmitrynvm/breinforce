@@ -22,10 +22,11 @@ def pretty(history):
             elif action.name == 'call':
                 out += f'calls ${action.value}'
             else:
-                if state['call']:
-                    out += f"raises ${action.value - state['call']} to ${action.value}"
+                if has_betted:
+                    out += f"raises ${action.value - state['valid_actions']['call']} to ${action.value}"
                 else:
                     out += f'bets ${action.value}'
+                    has_betted = True
             out += '\n'
     return out
 
@@ -122,8 +123,9 @@ def river(history):
     return out
 
 
-def summary(state):
+def summary(history):
     out = ''
+    state = history[-1].state
     n_players = state['n_players']
     pot = state['pot']
     rake = state['rake']
@@ -198,13 +200,10 @@ def render(history):
     '''Render representation based on the table configuration
     '''
     out = ''
-    '''
-    out += header(env.history)
-    out += preflop(env.history)
-    out += flop(env.history)
-    out += turn(env.history)
-    out += river(env.history)
-    out += summary(env.state)
-    '''
+    out += header(history)
+    out += preflop(history)
+    out += flop(history)
+    out += turn(history)
+    out += river(history)
+    out += summary(history)
     return out
-

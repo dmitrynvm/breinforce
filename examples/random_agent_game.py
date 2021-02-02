@@ -4,7 +4,8 @@ from breinforce import agents, core, envs
 core.utils.configure()
 env = gym.make('CustomSixPlayer-v0')
 
-splits = [1/3, 1/2, 3/4, 1, 2]
+splits = [1/3, 1/2, 3/4, 1, 3/2]
+print(splits)
 
 players = [agents.RandomAgent(splits)] * 6
 env.register(players)
