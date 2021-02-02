@@ -216,8 +216,7 @@ def learn(agent, policy_nn, target_nn):
                 step += 1
                 if obs['player'] < 5:
                     action = env.predict(obs)
-                    print(action)
-                    obs, rewards, done, info = env.step(action.value)
+                    obs, rewards, done, info = env.step(action)
                     prev_obs = obs
                 else:
                     action = agent.predict(obs, policy_nn)

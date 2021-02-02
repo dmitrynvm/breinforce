@@ -1,7 +1,7 @@
-from .base_view import BaseView
+from . import jsonify
 from . import pokerstars
 
 __all__ = [
-    'BaseView',
+    'jsonify',
     'pokerstars'
 ]

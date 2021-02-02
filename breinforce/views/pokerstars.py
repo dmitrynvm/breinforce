@@ -22,8 +22,8 @@ def pretty(history):
             elif action.name == 'call':
                 out += f'calls ${action.value}'
             else:
-                if info['call']:
-                    out += f"raises ${action.value - info['call']} to ${action.value}"
+                if state['call']:
+                    out += f"raises ${action.value - state['call']} to ${action.value}"
                 else:
                     out += f'bets ${action.value}'
             out += '\n'

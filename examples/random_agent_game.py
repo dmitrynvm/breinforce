@@ -10,11 +10,10 @@ players = [agents.RandomAgent(splits)] * 6
 env.register(players)
 obs = env.reset()
 
-
 while True:
     action = env.predict(obs)
     obs, rewards, done, info = env.step(action)
     if all(done):
         break
 
-print(env.render())
+print(env.render('jsonify'))
