@@ -12,17 +12,17 @@ class SplitAgent(BaseAgent):
         valid_actions = obs['valid_actions']
         out = {}
         out['fold'] = valid_actions['fold']
-        if 'call' in valid_actions:
-            out['call'] = valid_actions['call']
+        out['call'] = valid_actions['call']
         if 'raise' in valid_actions:
             raises = {}
             raise_min = obs['valid_actions']['raise']['min']
             raise_max = obs['valid_actions']['raise']['max']
-            for i, frac in enumerate(self.splits):
-                name = 'raise_' + str(Fraction(frac).limit_denominator())
-                split = int(frac * obs['pot'])
+            for split in self.splits:
+                name = str(Fraction(split).limit_denominator())
+                split = int(split * obs['pot'])
                 if raise_min < split < raise_max:
                     raises[name] = split
-            out['raise'] = raises
+            if raises:
+                out['raise'] = raises
         out['allin'] = valid_actions['allin']
         return Dict(out)

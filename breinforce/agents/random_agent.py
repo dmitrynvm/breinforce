@@ -11,7 +11,5 @@ class RandomAgent(SplitAgent):
 
     def predict(self, obs):
         legal_actions = flatten(self.legal_actions(obs))
-        print(obs['valid_actions'])
-        print(self.legal_actions(obs))
         action = random.choice(list(legal_actions.items()))
         return Action(*action)

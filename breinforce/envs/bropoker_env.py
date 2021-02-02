@@ -146,12 +146,11 @@ def get_valid_actions(state):
     #print(call, min_raise, max_raise)
     out = {}
     out['fold'] = 0
-    if not np.any(get_allin(state)):
-        out['call'] = call
-        out['raise'] = {
-            'min': min_raise,
-            'max': max_raise
-        }
+    out['call'] = call
+    out['raise'] = {
+        'min': min_raise,
+        'max': max_raise
+    }
     out['allin'] = max_raise
     return Dict(out)
 
@@ -286,12 +285,8 @@ def perform_blinds(state):
 
 def update_largest(state, action):
     valid_actions = get_valid_actions(state)
-    if 'call' in valid_actions:
-        if action.value and (action.value - valid_actions['call']) >= state.largest:
-            state.largest = action.value - valid_actions['call']
-    else:
-        state.largest = float('inf')
-
+    if action.value and (action.value - valid_actions['call']) >= state.largest:
+        state.largest = action.value - valid_actions['call']
 
 
 def update_folded(state, action):

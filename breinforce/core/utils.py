@@ -30,7 +30,7 @@ def flatten(legal_actions):
     for k, v in legal_actions.items():
         if isinstance(v, dict):
             for ik, iv in v.items():
-                out[f'{ik}'] = iv
+                out[f'raise_{ik}'] = iv
         else:
             out[k] = v
     return out

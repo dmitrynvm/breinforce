@@ -13,11 +13,12 @@ class RuleBasedAgent(SplitAgent):
 
     def predict(self, obs):
         legal_actions = self.legal_actions(obs)
-        legal_raises = legal_actions['raise']
         if obs['street'] == 0:
             action = ('call', legal_actions['call'])
         elif obs['street'] in [1, 2]:
-            if legal_raises:
+            print(legal_actions)
+            if 'raise' in legal_actions:
+                legal_raises = {f'raise_{k}': v for k, v in legal_actions['raise'].items()}
                 action = random.choice(list(legal_raises.items()))
             else:
                 action = ('call', legal_actions['call'])
