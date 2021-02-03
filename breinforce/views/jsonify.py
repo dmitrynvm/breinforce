@@ -5,7 +5,7 @@ import numpy as np
 
 def sub(state):
     out = {}
-    keys = ['largest', 'stacks', 'payouts', 'community_cards', 'hole_cards', 'alive', 'contribs', 'acted', 'commits', 'folded', 'valid_actions']
+    keys = ['largest', 'pot', 'stacks', 'payouts', 'community_cards', 'hole_cards', 'alive', 'contribs', 'acted', 'commits', 'folded', 'valid_actions']
 
     for key in keys:
         val = state[key]
