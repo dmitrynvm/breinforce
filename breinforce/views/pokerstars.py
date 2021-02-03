@@ -9,25 +9,29 @@ def select(history, street):
 def pretty(history):
     out = ''
     has_betted = False
-    for step, item in enumerate(history):
-        state, player, action, info = item
+    for step, episode in enumerate(history):
+        state, player, action, info = episode
         folded = state['folded']
         street = state['street']
-        if folded[player] >= street:
-            out += f'agent_{player+1}: '
-            if 'fold' in action.name:
-                out += 'folds'
-            elif 'check' in action.name:
-                out += 'checks'
-            elif action.name == 'call':
-                out += f'calls ${action.value}'
+        out += f'agent_{player+1}: '
+        if 'fold' == action.name:
+            out += 'folds'
+        elif not state['valid_actions']['call']:
+            out += f'checks'
+        elif 'call' == action.name:
+            out += f'calls ${action.value}'
+        elif state['valid_actions']['call'] == state['valid_actions']['allin']:
+            out += f'calls ${action.value}'
+        else:
+            if has_betted:
+                out += f"raises ${action.value - state['valid_actions']['call']} to ${action.value}"
             else:
-                if has_betted:
+                if street:
                     out += f"raises ${action.value - state['valid_actions']['call']} to ${action.value}"
                 else:
                     out += f'bets ${action.value}'
-                    has_betted = True
-            out += '\n'
+                has_betted = True
+        out += '\n'
     return out
 
 

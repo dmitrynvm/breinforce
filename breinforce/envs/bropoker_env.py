@@ -123,6 +123,15 @@ def get_agreed(state):
     return acted + empty + pushed + folded
 
 
+def get_all_agreed(state):
+    if not all(state.acted):
+        return False
+    return all(
+        (state.commits == state.commits.max())
+        | (state.stacks == 0)
+        | np.logical_not(state.alive)
+    )
+
 def get_payouts(state):
     # players that have folded lose their actions
     payouts = -1 * state.contribs * np.logical_not(state.alive)
@@ -234,9 +243,9 @@ def move_player(state):
 
 
 def move_street(state):
-    if all(get_agreed(state)):
-        state.player = state.button
-        move_player(state)
+    if get_all_agreed(state):
+        #state.player = state.button
+        #move_player(state)
         # if at most 1 player alive and not all in turn up all
         # board cards and evaluate hand
         while True:

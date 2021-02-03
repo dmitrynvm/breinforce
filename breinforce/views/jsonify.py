@@ -19,12 +19,17 @@ def sub(state):
     return out
 
 
-def render(history):
+def render(episodes):
     out = ''
-    for episode in history:
+    prev_state = None
+    for episode in episodes:
         player = episode.player
-        street = episode.state.street
+        if prev_state:
+            street = prev_state.street
+        else:
+            street = 0
         out += f'player: {player}, street: {street}, '
         out += str(episode.action) + '\n'
         out += json.dumps(sub(episode.state), sort_keys=True, indent=4) + '\n'
+        prev_state = episode.state
     return out
