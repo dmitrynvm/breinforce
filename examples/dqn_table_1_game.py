@@ -16,11 +16,27 @@ from tabulate import tabulate
 import plotly.graph_objects as go
 from tqdm import tqdm
 from time import sleep
+from addict import Dict
+from fractions import Fraction
+import collections
+
 
 np.random.seed(1)
 pd.options.plotting.backend = 'plotly'
 
 Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward'))
+Action = namedtuple('Action', ['name', 'value'])
+
+
+def flatten(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
 
 class SequentialMemory():
@@ -77,14 +93,14 @@ class GreedyStrategy():
 
 
 class DQNetwork(nn.Module):
-    def __init__(self, n_features):
+    def __init__(self, n_features, n_output):
         super().__init__()
         self.fc1 = nn.Linear(in_features=n_features, out_features=24)
         self.fc2 = nn.Linear(in_features=24, out_features=32)
         self.fc3 = nn.Linear(in_features=32, out_features=100)
         self.fc4 = nn.Linear(in_features=100, out_features=100)
         self.fc5 = nn.Linear(in_features=100, out_features=32)
-        self.out = nn.Linear(in_features=32, out_features=6)
+        self.out = nn.Linear(in_features=32, out_features=n_output)
 
     def forward(self, x):
         x = x.flatten(start_dim=1)
@@ -105,28 +121,43 @@ class DQNAgent():
         self.device = device
 
     def encode(self, obs):
-        pads = ['--' for i in range(5 - len(obs['community_cards']))]
-        street = obs['street']
-        button = obs['button']
-        player = obs['player']
-        pot = obs['pot']
-        call = obs['call']
-        min_raise = obs['min_raise']
-        max_raise = obs['max_raise']
 
+        possible_moves = ['fold', 'call', 'allin', 'raise_1/3', 'raise_1/2', 'raise_3/4', 'raise_1', 'raise_3/2']
+
+        legal_moves = []
+        for move in possible_moves:
+            if move in obs['legal_actions']:
+                move_sum = obs['legal_actions'][move]
+            else:
+                move_sum = -10
+            legal_moves.append(move_sum)
+
+        pads = ['--' for i in range(5 - len(obs['community_cards']))]
         community_cards = obs['community_cards'] + pads
         hole_cards = obs['hole_cards']
         alive = list(obs['alive'])
+
+        if len(obs['valid_actions']) == 0:
+            valid_call = -10
+            raise_min = -10
+            raise_max = -10
+        else:
+            valid_call = obs['valid_actions']['call']
+            raise_min = obs['valid_actions']['raise']['min']
+            raise_max = obs['valid_actions']['raise']['max']
+
         state_vector = alive + \
-                    [obs['button'], obs['call'], obs['max_raise'], obs['min_raise'], obs['pot']] + list(obs['stacks']) + list(obs['commits']) + \
-                        community_cards + hole_cards
+                    [obs['button'], valid_call, raise_min,
+                     raise_max, obs['pot']] + list(obs['stacks']) + list(obs['commits']) + \
+                        community_cards + hole_cards + legal_moves
 
         input_df = pd.DataFrame([state_vector], columns=[f'alive_{i}' for i in range(6)] +
                                             ['button', 'call', 'max_raise', 'min_raise', 'pot'] +
                                             [f'stack_{i}' for i in range(6)] +
                                             [f'commit_{i}' for i in range(6)] +
-                                            ['board_1', 'board_2', 'board_3', 'board_4', 'board_5', 'hole_1', 'hole_2'])
-
+                                            ['board_1', 'board_2', 'board_3', 'board_4', 'board_5', 'hole_1', 'hole_2'] +
+                                            ['legal_fold', 'legal_call', 'legal_allin', 'raise_1/3', 'raise_1/2',
+                                             'raise_3/4', 'raise_1', 'raise_3/2'])
 
         df = input_df
         all_cards = [
@@ -152,20 +183,23 @@ class DQNAgent():
         for i in range(6):
             df[f'alive_{i}'] = df[f'alive_{i}'].apply(lambda x: 1 if x is True else 0)
         df.drop(card_columns, axis=1, inplace=True)
-        new_merged_arr = np.concatenate((df.values, all_enc_df.values), axis=1)
-        new_merged_df = pd.DataFrame(new_merged_arr, columns=df.columns.tolist() + all_enc_df.columns.tolist())
-        numerical_columns = ['call', 'max_raise', 'min_raise', 'pot'] + [f'stack_{i}' for i in range(6)] + [f'commit_{i}' for i in range(6)]
-        norm = Normalizer()
-        norm.fit(new_merged_df[numerical_columns].values)
-        norm_new_merged_df = pd.DataFrame(norm.transform(new_merged_df[numerical_columns].values), columns=numerical_columns)
-        new_merged_df.drop(numerical_columns, axis=1, inplace=True)
-        new_norm_new_merged_df = pd.concat([new_merged_df, norm_new_merged_df], axis=1)
 
-        new_norm_new_merged_df, card_encode_obsr, norm = new_norm_new_merged_df, card_encoder, norm
+        numerical_columns = ['call', 'max_raise', 'min_raise', 'pot'] + [f'stack_{i}' for i in range(6)] \
+                            + [f'commit_{i}' for i in range(6)] + ['legal_fold', 'legal_call', 'legal_allin', 'raise_1/3', 'raise_1/2',
+                                             'raise_3/4', 'raise_1', 'raise_3/2']
+
+        norm = Normalizer()
+        norm.fit(df[numerical_columns].values)
+        norm_new_merged_df = pd.DataFrame(norm.transform(df[numerical_columns].values),
+                                          columns=numerical_columns)
+        df.drop(numerical_columns, axis=1, inplace=True)
+
+        new_norm_new_merged_df = pd.concat([df, all_enc_df, norm_new_merged_df], axis=1)
+
         vector = new_norm_new_merged_df.values
         torch_tensor = torch.tensor(vector)
-        return torch_tensor.float()
 
+        return torch_tensor.float()
 
     def predict(self, observation, policy_net):
         observation = self.encode(observation)
@@ -178,6 +212,26 @@ class DQNAgent():
         else:
             with torch.no_grad():
                 return policy_net(observation).argmax(dim=1).to(self.device) # exploit
+
+
+def legal_actions(obs, splits):
+    valid_actions = obs['valid_actions']
+    out = {}
+    out['fold'] = valid_actions['fold']
+    out['call'] = valid_actions['call']
+    if 'raise' in valid_actions:
+        raises = {}
+        raise_min = obs['valid_actions']['raise']['min']
+        raise_max = obs['valid_actions']['raise']['max']
+        for split in splits:
+            name = str(Fraction(split).limit_denominator())
+            split = int(split * obs['pot'])
+            if raise_min < split < raise_max:
+                raises[name] = split
+        if raises:
+            out['raise'] = raises
+    out['allin'] = valid_actions['allin']
+    return Dict(out)
 
 
 def learn(agent, policy_nn, target_nn):
@@ -203,10 +257,11 @@ def learn(agent, policy_nn, target_nn):
     pbar = tqdm(total=n_epochs * n_episodes)
     for epoch in range(n_epochs):
         epoch_wrate = np.array([0, 0, 0, 0, 0, 0])
+        epoch_loss = 0
         for episode in range(n_episodes):
             pbar.update(1)
             env = gym.make('CustomSixPlayer-v0')
-            splits = [1/3, 1/2, 3/4, 1, 2]
+            splits = [1/3, 1/2, 3/4, 1, 3/2]
             players = [agents.RandomAgent(splits)] * 5 + [agents.BaseAgent()]
             env.register(players)
             obs = env.reset()
@@ -216,24 +271,58 @@ def learn(agent, policy_nn, target_nn):
                 step += 1
                 if obs['player'] < 5:
                     action = env.predict(obs)
-                    obs, rewards, done, info = env.step(action)
-                    prev_obs = obs
+                    obs, rewards, done = env.step(action)
                 else:
+                    l_actions = legal_actions(obs, splits)
+                    l_actions = flatten(l_actions, parent_key='', sep='_')
+                    obs['legal_actions'] = l_actions
+
                     action = agent.predict(obs, policy_nn)
                     player_id = obs['player']
-                    action_type = action.value
-                    if action_type == 0:
-                        action_sum = -1
-                    elif action_type == 5:
-                        action_sum = obs['stacks'][obs['player']]
-                    elif action_type == 1:
-                        action_sum = obs['call']
-                    else:
-                        action_sum = 100
+                    action_type = action.numpy()[0]
 
-                    obs, rewards, done, info = env.step(action_sum)
+                    a_w_types = {0: 'fold', 1: 'raise_1/3', 2: 'raise_1/2', 3: 'raise_3/4',
+                                 4: 'raise_1', 5: 'raise_3/2', 6: 'call', 7: 'allin'}
+
+                    if a_w_types[action.numpy()[0]] not in obs['legal_actions']:
+                        if action_type == 1 or action_type == 2 or action_type == 3 or action_type == 4:
+                            action = torch.tensor([0])
+                            action_sum = obs['legal_actions']['fold']
+                        else:
+                            action = torch.tensor([7])
+                            action_sum = obs['legal_actions']['allin']
+                    else:
+                        if action_type == 0:
+                            action_sum = obs['legal_actions']['fold']
+                        elif action_type == 7:
+                            action_sum = obs['legal_actions']['allin']
+                        elif action_type == 6:
+                            action_sum = obs['legal_actions']['call']
+                        elif action_type == 1:
+                            action_sum = obs['legal_actions']['raise_1/3']
+                        elif action_type == 2:
+                            action_sum = obs['legal_actions']['raise_1/2']
+                        elif action_type == 3:
+                            action_sum = obs['legal_actions']['raise_3/4']
+                        elif action_type == 4:
+                            action_sum = obs['legal_actions']['raise_1']
+                        else:
+                            action_sum = obs['legal_actions']['raise_3/2']
+
+                    prev_obs = obs
+
+                    the_action = Action(a_w_types[action_type], action_sum)
+
+                    obs, rewards, done = env.step(the_action)
+
+                    l_actions = legal_actions(obs, splits)
+                    l_actions = flatten(l_actions, parent_key='', sep='_')
+                    obs['legal_actions'] = l_actions
+                    encoded_obs = agent.encode(obs)
+                    prev_encoded_obs = agent.encode(prev_obs)
+
                     reward = torch.from_numpy(np.array(rewards[player_id]))
-                    memory.add(Experience(prev_obs, action, obs, reward))
+                    memory.add(Experience(prev_encoded_obs.float(), action, encoded_obs.float(), reward))
 
                     if memory.ready(batch_size):
                         states, actions, rewards, next_states = memory.sample(batch_size)
@@ -244,6 +333,7 @@ def learn(agent, policy_nn, target_nn):
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
+                        epoch_loss = loss
 
                 if all(done):
                     break
@@ -255,11 +345,23 @@ def learn(agent, policy_nn, target_nn):
             for item in env.history:
                 state, action, reward, info = item
                 stacks.append(state['stacks'])
-            pays = np.array(env.payouts, dtype='int')
+            pays = np.array(env.state.payouts, dtype='int')
             player = np.argmax(pays)
             epoch_wrate += pays
             wins[player] += 1
             total += pays
+
+        '''
+        if epoch % 1000 == 0:
+            # saving checkpoint
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': policy_nn.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': epoch_loss,
+            }, 'checkpoints/latest_model.pt')
+        '''
+
         epoch_wrate = np.round(epoch_wrate / n_episodes)
         wrate.append(epoch_wrate.tolist())
     pbar.close()
@@ -268,7 +370,7 @@ def learn(agent, policy_nn, target_nn):
     df_wrate = pd.DataFrame(data=wrate, dtype='int')
     df_wrate['wins'] = pd.DataFrame(wins)
     df_wrate['$/100'] = pd.DataFrame(total / (n_epochs * n_episodes)).round()
-    df_wrate['bb/100'] = pd.DataFrame(total / (n_epochs * n_episodes * env.big_blind)).round()
+    df_wrate['bb/100'] = pd.DataFrame(total / (n_epochs * n_episodes * env.state.big_blind)).round()
     df_wrate['total'] = pd.DataFrame(total)
     df_wrate.to_csv('results/wrates.csv')
 
@@ -291,9 +393,9 @@ if __name__ == '__main__':
     eps_decay = 0.001
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     strategy = GreedyStrategy(eps_start, eps_stop, eps_decay)
-    agent = DQNAgent(strategy, 6, device)
-    policy_nn = DQNetwork(387).to(device)
-    target_nn = DQNetwork(387).to(device)
+    agent = DQNAgent(strategy, 8, device)
+    policy_nn = DQNetwork(395, 8).to(device)
+    target_nn = DQNetwork(395, 8).to(device)
     target_nn.load_state_dict(policy_nn.state_dict())
     os.makedirs('results', exist_ok=True)
     torch.save(policy_nn.state_dict(), 'results/policy_nn.pt')
