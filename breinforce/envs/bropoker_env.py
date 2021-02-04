@@ -5,8 +5,10 @@ import numpy as np
 import random
 import string
 import uuid
+import pydux
 from addict import Dict
 from breinforce import agents, games, views
+from breinforce.games import bropoker
 from breinforce.core.types import Action, Episode
 
 
@@ -27,88 +29,8 @@ def guid(size, mode='int'):
         out = ''.join(random.choice(string.ascii_lowercase) for _ in range(size))
     return out
 
-def create_deck(n_suits, n_ranks):
-    '''A deck contains at most 52 cards, 13 ranks 4 suits. Any 'subdeck'
-    of the standard 52 card deck is valid, i.e. the number of suits
-    must be between 1 and 4 and number of ranks between 1 and 13. A
-    deck can be tricked to ensure a certain order of cards.
 
-    Parameters
-    ----------
-    n_suits : int
-        number of suits to use in deck
-    n_ranks : int
-        number of ranks to use in deck
-    '''
-    out = []
-    ranks = games.bropoker.Card.STR_RANKS[-n_ranks:]
-    suits = list(games.bropoker.Card.SUITS_TO_INTS.keys())[:n_suits]
-    for rank in ranks:
-        for suit in suits:
-            out.append(games.bropoker.Card(rank + suit))
-    return out
-
-
-def shuffle(cards):
-    '''Shuffles the deck. If a tricking order is given, the desired
-    cards are placed on the top of the deck after shuffling.
-
-    Returns
-    -------
-    Deck
-        self
-    '''
-    return random.sample(cards, len(cards))
-
-
-def deal(cards, n = 1):
-    '''Draws cards from the top of the deck. If the number of cards
-    to draw exceeds the number of cards in the deck, all cards
-    left in the deck are returned.
-
-    Parameters
-    ----------
-    n : int, optional
-        number of cards to draw, by default 1
-
-    Returns
-    -------
-    List[Card]
-        cards drawn from the deck
-    '''
-    out = []
-    for _ in range(n):
-        if cards:
-            out.append(cards.pop(0))
-        else:
-            break
-    return out
-
-
-def get_call(state):
-    out = 0
-    if not all(get_done(state)):
-        out = state.commits.max() - state.commits[state.player]
-        out = min(out, state.stacks[state.player])
-    return out
-
-
-def get_min_raise(state):
-    out = 0
-    if not all(get_done(state)):
-        out = max(state.straddle, get_call(state) + state.largest)
-        out = min(out, state.stacks[state.player])
-    return out
-
-
-def get_max_raise(state):
-    out = 0
-    if not all(get_done(state)):
-        out = min(state.stacks[state.player], state.raise_sizes[state.street])
-    return out
-
-
-def get_done(state):
+def done(state):
     if state.street >= state.n_streets or sum(state.alive) <= 1:
         return np.full(state.n_players, 1)
     return np.logical_not(state.alive)
@@ -145,26 +67,26 @@ def get_payouts(state):
         state.stacks += payouts + state.contribs
     return payouts
 
-def get_allin(state):
-    return state.alive * (state.stacks == 0)
 
 def get_valid_actions(state):
-    call = get_call(state)
-    min_raise = get_min_raise(state)
-    max_raise = get_max_raise(state)
-    #print(call, min_raise, max_raise)
     out = {}
-    out['fold'] = 0
-    out['call'] = call
-    out['raise'] = {
-        'min': min_raise,
-        'max': max_raise
-    }
-    out['allin'] = max_raise
+    if not all(done(state)):
+        call = state.commits.max() - state.commits[state.player]
+        call = min(call, state.stacks[state.player])
+        raise_min = max(state.straddle, call + state.largest)
+        raise_min = min(raise_min, state.stacks[state.player])
+        raise_max = min(state.stacks[state.player], state.raise_sizes[state.street])
+        out['fold'] = 0
+        out['call'] = call
+        out['raise'] = {
+            'min': raise_min,
+            'max': raise_max
+        }
+        out['allin'] = raise_max
     return Dict(out)
 
 
-def get_observation(state):
+def observe(state):
     community_cards = [str(c) for c in state.community_cards]
     hole_cards = [[str(c) for c in cs] for cs in state.hole_cards]
     obs = {
@@ -182,7 +104,7 @@ def get_observation(state):
     return obs
 
 
-def evaluate(state) -> np.ndarray:
+def evaluate(state):
     judge = games.bropoker.Judge(state.n_suits, state.n_ranks, state.n_cards_for_hand)
     # grab array of hand strength and pot contribs
     worst_hand = judge.hashmap.max_rank + 1
@@ -232,39 +154,7 @@ def evaluate(state) -> np.ndarray:
     return payouts
 
 
-def move_player(state):
-    for idx in range(1, state.n_players + 1):
-        player = (state.player + idx) % state.n_players
-        if state.alive[player]:
-            break
-        else:
-            state.acted[player] = True
-    state.player = player
-
-
-def move_street(state):
-    if get_all_agreed(state):
-        #state.player = state.button
-        #move_player(state)
-        # if at most 1 player alive and not all in turn up all
-        # board cards and evaluate hand
-        while True:
-            state.street += 1
-            allin = state.alive * (state.stacks == 0)
-            all_allin = sum(state.alive) - sum(allin) <= 1
-            if state.street >= state.n_streets:
-                break
-            state.community_cards += deal(
-                state.deck,
-                state.ns_community_cards[state.street]
-            )
-            if not all_allin:
-                break
-        state.commits.fill(0)
-        state.acted = np.logical_not(state.alive).astype(int)
-
-
-def perform_action(state, action):
+def update_action(state, action):
     action_value = max(0, min(state.stacks[state.player], action.value))
     state.pot += action_value
     state.contribs[state.player] += action_value
@@ -273,7 +163,7 @@ def perform_action(state, action):
     state.acted[state.player] = 1
 
 
-def perform_antes(state):
+def update_antes(state):
     actions = state.antes
     actions = np.roll(actions, state.player)
     actions = (state.stacks > 0) * state.alive * actions
@@ -282,7 +172,7 @@ def perform_antes(state):
     state.stacks -= actions
 
 
-def perform_blinds(state):
+def update_blinds(state):
     actions = state.blinds
     actions = np.roll(actions, state.player)
     actions = (state.stacks > 0) * state.alive * actions
@@ -324,8 +214,8 @@ def create_state(config):
     n_suits = config['n_suits']
     n_hole_cards = config['n_hole_cards']
     n_community_cards = config['ns_community_cards'][0]
-    deck = shuffle(create_deck(n_suits, n_ranks))
-    state = Dict({
+    deck = bropoker.deck.shuffle(bropoker.deck.create(n_suits, n_ranks))
+    out = Dict({
         'n_players': config["n_players"],
         'n_streets': config["n_streets"],
         'n_suits': config["n_suits"],
@@ -354,8 +244,8 @@ def create_state(config):
         'largest': 0,
         'pot': 0,
         'payouts': [0 for _ in range(n_players)],
-        'community_cards': deal(deck, n_community_cards),
-        'hole_cards': [deal(deck, n_hole_cards) for _ in range(n_players)],
+        'community_cards': bropoker.deck.deal(deck, n_community_cards),
+        'hole_cards': [bropoker.deck.deal(deck, n_hole_cards) for _ in range(n_players)],
         'alive': np.ones(n_players, dtype=np.uint8),
         'contribs': np.zeros(n_players, dtype=np.int32),
         'acted': np.zeros(n_players, dtype=np.uint8),
@@ -364,39 +254,85 @@ def create_state(config):
         'deck': deck,
         'valid_actions': None
     })
-    if n_players > 2:
-        move_player(state)
-    #perform_antes(state)
-    perform_blinds(state)
-    move_player(state)
-    move_player(state)
-    move_player(state)
-    return state
+    return out
 
 
-def move_step(state, action):
-    va = get_valid_actions(state)
+def next_player(state):
+    for idx in range(1, state.n_players + 1):
+        player = (state.player + idx) % state.n_players
+        if state.alive[player]:
+            break
+        else:
+            state.acted[player] = True
+    state.player = player
+
+
+def next_street(state):
+    if get_all_agreed(state):
+        #state.player = state.button
+        #next_player(state)
+        # if at most 1 player alive and not all in turn up all
+        # board cards and evaluate hand
+        while True:
+            state.street += 1#(state.street + 1) % state.n_streets
+            allin = state.alive * (state.stacks == 0)
+            all_allin = sum(state.alive) - sum(allin) <= 1
+            if state.street >= state.n_streets:
+                break
+            state.community_cards += bropoker.deck.deal(
+                state.deck,
+                state.ns_community_cards[state.street]
+            )
+            if not all_allin:
+                break
+        state.commits.fill(0)
+        state.acted = np.logical_not(state.alive).astype(int)
+
+
+def next_step(state, action):
     update_largest(state, action)
     update_folded(state, action)
     update_valid_actions(state)
-    perform_action(state, action)
-    move_player(state)
-    move_street(state)
+    update_action(state, action)
+    next_player(state)
+    next_street(state)
 
-    observation = get_observation(state)
-    payouts = get_payouts(state)
-    update_payouts(state, payouts)
-    done = get_done(state)
-    info = None
-    observation['hole_cards'] = observation['hole_cards']
-    return observation, payouts, done, info
+
+def engine(state, action):
+    if action["type"] == "@@redux/INIT":
+        pass
+    elif action["type"] == "RESET":
+        n_players = state['n_players']
+        if n_players > 2:
+            next_player(state)
+        #update_antes(state)
+        update_blinds(state)
+        next_player(state)
+        next_player(state)
+        next_player(state)
+    elif action["type"] == "STEP":
+        next_step(state, action['action'])
+    else:
+        print("Unknown action", action)
+    return state
+
+
+def reset():
+    return {"type": "RESET"}
+
+
+def step(action):
+    return {
+        "type": "STEP",
+        'action': action
+    }
 
 
 class BropokerEnv(gym.Env):
 
     def __init__(self, config):
+        self.store = pydux.create_store(engine, create_state(config))
         self.config = config
-        self.state = create_state(config)
         self.history = []
         self.agents = None
 
@@ -407,17 +343,27 @@ class BropokerEnv(gym.Env):
         return self.players[self.state.player].predict(obs)
 
     def reset(self):
-        self.state = create_state(self.config)
+        self.store.dispatch(reset())
         self.history = []
-        #episode = Episode(self.state.deepcopy(), None, None, None)
-        #self.history += [episode]
-        return get_observation(self.state)
+        return observe(self.state)
 
     def step(self, action):
         player = self.state.player
-        out = move_step(self.state, action)
+        self.dispatch(step(action))
         self.history += [Episode(self.state.deepcopy(), player, action, None)]
-        return out
+        observation = observe(self.state)
+        payouts = get_payouts(self.state)
+        done_ = done(self.state)
+        update_payouts(self.state, payouts)
+        return observation, payouts, done_
+
+    @property
+    def state(self):
+        return self.store.get_state()
+
+    @property
+    def dispatch(self):
+        return self.store.dispatch
 
     def render(self, mode='pokerstars'):
         out = None

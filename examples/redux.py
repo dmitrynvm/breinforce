@@ -1,5 +1,7 @@
 import gym
+import pydux
 from breinforce import agents, core, envs
+
 
 core.utils.configure()
 env = gym.make('CustomSixPlayer-v0')
@@ -12,7 +14,7 @@ obs = env.reset()
 
 while True:
     action = env.predict(obs)
-    obs, rewards, done = env.step(action)
+    obs, rewards, done, info = env.step(action)
     if all(done):
         break
 

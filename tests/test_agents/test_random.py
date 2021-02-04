@@ -14,7 +14,7 @@ def test_random():
 
     while True:
         action = env.predict(obs)
-        obs, rewards, done, info = env.step(action)
+        obs, rewards, done = env.step(action)
         if all(done):
             break
 

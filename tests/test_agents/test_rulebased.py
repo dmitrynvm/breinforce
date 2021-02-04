@@ -14,7 +14,7 @@ def test_rulebased():
 
     while True:
         action = env.predict(obs)
-        obs, reword, done, info = env.step(action)
+        obs, reword, done = env.step(action)
         if all(done):
             break
     assert isinstance(env.render(), str)

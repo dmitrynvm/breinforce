@@ -93,7 +93,7 @@ def preflop(history):
 
 def flop(history):
     out = ''
-    state = history[0].state
+    state = history[-1].state
     community_cards = state['community_cards']
     flop_cards = repr(community_cards[:3]).replace(",", '') if len(community_cards) > 2 else None
     episodes = select(history, 1)
@@ -105,7 +105,7 @@ def flop(history):
 
 def turn(history):
     out = ''
-    state = history[0].state
+    state = history[-1].state
     community_cards = state['community_cards']
     turn_cards = repr(community_cards[:3]).replace(",", '') + '[' + repr(community_cards[3]) + ']' if len(community_cards) > 3 else None
     episodes = select(history, 2)
@@ -117,7 +117,7 @@ def turn(history):
 
 def river(history):
     out = ''
-    state = history[0].state
+    state = history[-1].state
     community_cards = state['community_cards']
     river_cards = repr(community_cards[:4]).replace(",", '') + '[' + repr(community_cards[4]).replace(",", '') + ']' if len(community_cards) > 4 else None
     river = select(history, 3)
