@@ -16,7 +16,6 @@ from tabulate import tabulate
 import plotly.graph_objects as go
 from tqdm import tqdm
 from time import sleep
-from addict import Dict
 from fractions import Fraction
 import collections
 
@@ -231,7 +230,7 @@ def legal_actions(obs, splits):
         if raises:
             out['raise'] = raises
     out['allin'] = valid_actions['allin']
-    return Dict(out)
+    return out
 
 
 def learn(agent, policy_nn, target_nn):
@@ -240,8 +239,8 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 3
-    n_episodes = 5
+    n_epochs = 500
+    n_episodes = 100
 
     core.utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -255,6 +254,7 @@ def learn(agent, policy_nn, target_nn):
     total = np.array([0, 0, 0, 0, 0, 0], dtype='int')
     print('Learning on Table 1 (DQN, MLP with 5 layers)')
     pbar = tqdm(total=n_epochs * n_episodes)
+    agent_out = ''
     for epoch in range(n_epochs):
         epoch_wrate = np.array([0, 0, 0, 0, 0, 0])
         epoch_loss = 0
@@ -313,7 +313,11 @@ def learn(agent, policy_nn, target_nn):
 
                     the_action = Action(a_w_types[action_type], action_sum)
 
+                    policy_out = str(obs) + '-> '
                     obs, rewards, done = env.step(the_action)
+                    policy_out += str(the_action) + '\n'
+                    agent_out += policy_out
+
 
                     l_actions = legal_actions(obs, splits)
                     l_actions = flatten(l_actions, parent_key='', sep='_')
@@ -385,6 +389,10 @@ def learn(agent, policy_nn, target_nn):
 
     with open('results/history.txt', 'w') as f:
         f.write(hist)
+
+
+    with open('results/agent_out.txt', 'w') as f:
+        f.write(agent_out)
 
 
 if __name__ == '__main__':
