@@ -2,13 +2,15 @@ def select(history, street):
     out = []
     for episode in history:
         if episode.state['street'] == street:
+            print(episode)
+            print()
             out += [episode]
     return out
 
 
-def header(state):
+def header(episodes):
     out = ''
-
+    state = episodes[0].state
     n_players = state.n_players
     hole_cards = state.hole_cards
     sb = state.small_blind
@@ -59,7 +61,6 @@ def verb(action_type, i):
             out += 'bets'
     else:
         out += "foo"
-        print('foo', action_type)
     return out
 
 
@@ -68,30 +69,30 @@ def preflop(history):
     out = '** PREFLOP **\n'
     for i, episode in enumerate(history):
         state = episode.state
-        action = episode.action
-        action_type = episode.action_type
-        player = state.player
-        player_name = state.player_names[player]
+        action_name, action_value = episode.action
+        action_type = action_name.split('_')[0]
+        player_name = state.player_names[state.player]
         out += f"{player_name} {verb(action_type, i)} "
-        if 'call' in action_type or 'raise' in action_type:
-            out += f"[{action} $]"
+        state = episode.state
+        if 'call' in action_type or 'raise' in action_type or 'allin' in action_type:
+            out += f"[{action_value} $]"
         out += "\n"
     return out
 
 
 def flop(history):
     history = select(history, 1)
-    community_cards = history[0].state.community_cards
+    print(history)
+    community_cards = history[-1].state.community_cards
     out = f'** FLOP ** {community_cards}\n'
     for i, episode in enumerate(history):
         state = episode.state
-        action = episode.action
-        action_type = episode.action_type
-        player = state.player
-        player_name = state.player_names[player]
+        action_name, action_value = episode.action
+        action_type = action_name.split('_')[0]
+        player_name = state.player_names[state.player]
         out += f"{player_name} {verb(action_type, i)} "
-        if 'call' in action_type or 'raise' in action_type:
-            out += f"[{action} $]"
+        if 'call' in action_type or 'raise' in action_type or 'allin' in action_type:
+            out += f"[{action_value} $]"
         out += "\n"
     return out
 
@@ -102,13 +103,12 @@ def turn(history):
     out = f'** TURN ** {community_cards}\n'
     for i, episode in enumerate(history):
         state = episode.state
-        action = episode.action
-        action_type = episode.action_type
-        player = state.player
-        player_name = state.player_names[player]
+        action_name, action_value = episode.action
+        action_type = action_name.split('_')[0]
+        player_name = state.player_names[state.player]
         out += f"{player_name} {verb(action_type, i)} "
-        if 'call' in action_type or 'raise' in action_type:
-            out += f"[{action} $]"
+        if 'call' in action_type or 'raise' in action_type or 'allin' in action_type:
+            out += f"[{action_value} $]"
         out += "\n"
     return out
 
@@ -119,13 +119,13 @@ def river(history):
     out = f'** RIVER ** {community_cards}\n'
     for i, episode in enumerate(history):
         state = episode.state
-        action = episode.action
-        action_type = episode.action_type
-        player = state.player
-        player_name = state.player_names[player]
+        action_name, action_value = episode.action
+        print(episode.action)
+        action_type = action_name.split('_')[0]
+        player_name = state.player_names[state.player]
         out += f"{player_name} {verb(action_type, i)} "
-        if 'call' in action_type or 'raise' in action_type:
-            out += f"[{action} $]"
+        if 'call' in action_type or 'raise' in action_type or 'allin' in action_type:
+            out += f"[{action_value} $]"
         out += "\n"
     return out
 
@@ -141,9 +141,9 @@ def summary(history):
 
 def render(history):
     out = ''
-    state = history[0].state
-    street = state.street
-    out += header(state)
+    street = history[-1].state.street
+    print('street', street)
+    out += header(history)
     out += preflop(history)
     if street > 0:
         out += flop(history)

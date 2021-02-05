@@ -16,5 +16,6 @@ while True:
     if all(done):
         break
 
+#print(env.render('poker888'))
 print(env.render('pokerstars'))
 print(env.render('jsonify'))

@@ -367,8 +367,10 @@ class BropokerEnv(gym.Env):
 
     def render(self, mode='pokerstars'):
         out = None
-        if mode == 'pokerstars':
-            out = views.pokerstars.render(self.history)
-        elif mode == 'jsonify':
+        if mode == 'jsonify':
             out = views.jsonify.render(self.history)
+        elif mode == 'poker888':
+            out = views.poker888.render(self.history)
+        elif mode == 'pokerstars':
+            out = views.pokerstars.render(self.history)
         return out
