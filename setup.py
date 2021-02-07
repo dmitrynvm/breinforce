@@ -15,8 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=('tests',)),
     package_data={},
     install_requires=[
-        'numpy>=1.16.6',
-        'gym>=0.12.0'
+        'numpy>=1.16.6'
     ],
     extras_require={},
     requires_python='>=3.6',

@@ -13,7 +13,6 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import Normalizer
 from breinforce import agents, core, envs
 from tabulate import tabulate
-import plotly.graph_objects as go
 from tqdm import tqdm
 from time import sleep
 from fractions import Fraction
@@ -21,7 +20,6 @@ import collections
 
 
 np.random.seed(1)
-pd.options.plotting.backend = 'plotly'
 
 Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward'))
 Action = namedtuple('Action', ['name', 'value'])
@@ -239,8 +237,8 @@ def learn(agent, policy_nn, target_nn):
     target_update = 10
     memory_size = 100000
     lr_decay = 0.001
-    n_epochs = 500
-    n_episodes = 100
+    n_epochs = 5
+    n_episodes = 10
 
     core.utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -347,7 +345,7 @@ def learn(agent, policy_nn, target_nn):
 
             hist += env.render() + '\n\n'
             for item in env.history:
-                state, action, reward, info = item
+                state, action, reward = item
                 stacks.append(state['stacks'])
             pays = np.array(env.state.rewards, dtype='int')
             player = np.argmax(pays)

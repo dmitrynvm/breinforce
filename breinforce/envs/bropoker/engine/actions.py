@@ -5,7 +5,7 @@ from breinforce.envs.bropoker.types import Judge
 def observe(state):
     community_cards = [str(c) for c in state.community_cards]
     hole_cards = [[str(c) for c in cs] for cs in state.hole_cards]
-    obs = {
+    out = {
         'street': state.street,
         'button': state.button,
         'player': state.player,
@@ -17,7 +17,7 @@ def observe(state):
         'commits': state.commits.tolist(),
         'valid_actions': get_valid_actions(state)
     }
-    return obs
+    return out
 
 
 def reward(state):
@@ -105,19 +105,19 @@ def results(state):
 
 def get_valid_actions(state):
     out = {}
-    if not all(done(state)):
-        call = state.commits.max() - state.commits[state.player]
-        call = min(call, state.stacks[state.player])
-        raise_min = max(state.straddle, call + state.largest)
-        raise_min = min(raise_min, state.stacks[state.player])
-        raise_max = min(state.stacks[state.player], state.raise_sizes[state.street])
-        out['fold'] = 0
-        out['call'] = call
-        out['raise'] = {
-            'min': raise_min,
-            'max': raise_max
-        }
-        out['allin'] = raise_max
+    call = state.commits.max() - state.commits[state.player]
+    call = min(call, state.stacks[state.player])
+    raise_min = max(state.straddle, call + state.largest)
+    raise_min = min(raise_min, state.stacks[state.player])
+    street = state.street % state.n_streets
+    raise_max = min(state.stacks[state.player], state.raise_sizes[street])
+    out['fold'] = 0
+    out['call'] = call
+    out['raise'] = {
+        'min': raise_min,
+        'max': raise_max
+    }
+    out['allin'] = raise_max
     return out
 
 
@@ -195,14 +195,9 @@ def move_street(state):
             all_allin = sum(state.alive) - sum(allin) <= 1
             if state.street >= state.n_streets:
                 break
-            '''
-            print(state.community_cards)
-            state.community_cards += bropoker.deck.deal(
-                state.deck,
+            state.community_cards += state.deck.deal(
                 state.ns_community_cards[state.street]
             )
-            print(state.community_cards)
-            '''
             if not all_allin:
                 break
         state.commits.fill(0)

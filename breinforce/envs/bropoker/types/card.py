@@ -95,7 +95,7 @@ class Card(object):
             other = other.value
         return self.value & other
 
-    def __rand__(self):
+    def __rand__(self, other):
         return other & self.value
 
     def __or__(self, other):
