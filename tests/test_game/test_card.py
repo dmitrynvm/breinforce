@@ -1,7 +1,7 @@
 import random
 import pytest
 from breinforce.core import errors
-from breinforce.games.bropoker import Card
+from breinforce.envs.bropoker.types import Card
 
 
 def test_ops():

@@ -1,5 +1,5 @@
 import os
-from breinforce import games
+from breinforce.envs.bropoker.types import Judge
 
 
 def select(history, street):
@@ -10,7 +10,7 @@ def pretty(history):
     out = ''
     has_betted = False
     for step, episode in enumerate(history):
-        state, player, action, info = episode
+        state, player, action = episode
         folded = state['folded']
         street = state['street']
         out += f'agent_{player+1}: '
@@ -166,7 +166,7 @@ def get_results(state):
     items = []
     n_players = state['n_players']
     n_players = state['n_players']
-    payouts = state['payouts']
+    rewards = state['rewards']
     hole_cards = state['hole_cards']
     community_cards = state['community_cards']
     rake = state['rake']
@@ -188,10 +188,10 @@ def get_results(state):
             item['role'] = 'big blind'
         elif player == 3:
             item['role'] = 'straddle'
-        if payouts[player] > 0:
-            item['won'] = int((1 - rake) * payouts[player])
+        if rewards[player] > 0:
+            item['won'] = int((1 - rake) * rewards[player])
 
-        judge = games.bropoker.Judge(4, 13, 5)
+        judge = Judge(4, 13, 5)
         rank_val = judge.evaluate(hole_cards[player], community_cards)
         rank = judge.get_rank_class(rank_val)
         item['rank'] = rank

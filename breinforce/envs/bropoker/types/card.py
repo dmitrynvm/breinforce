@@ -1,11 +1,10 @@
 '''Classes and functions to create and manipulate cards and lists of
 cards from a standard 52 card poker deck'''
 
-from typing import Union
 from breinforce.core import errors
 
 
-class Card:
+class Card(object):
     '''Cards are represented as 32-bit integers. Most of the bits are used
     and have a specific meaning, check the poker README for details:
 
@@ -91,29 +90,29 @@ class Card:
         rank = Card.STR_RANKS[rank_int]
         return f'{rank}{suit}'
 
-    def __and__(self, other: Union['Card', int]) -> int:
+    def __and__(self, other):
         if isinstance(other, Card):
             other = other.value
         return self.value & other
 
-    def __rand__(self, other: int) -> int:
+    def __rand__(self):
         return other & self.value
 
-    def __or__(self, other: Union['Card', int]) -> int:
+    def __or__(self, other):
         if isinstance(other, Card):
             other = other.value
         return self.value | other
 
-    def __ror__(self, other: int) -> int:
+    def __ror__(self, other):
         return other | self.value
 
-    def __lshift__(self, other: int) -> int:
+    def __lshift__(self):
         return self.value << other
 
-    def __rshift__(self, other: int) -> int:
+    def __rshift__(self, other):
         return self.value >> other
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other):
         if isinstance(other, Card):
             return bool(self.value == other.value)
         raise NotImplementedError('only comparisons of two cards allowed')

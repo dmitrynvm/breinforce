@@ -349,7 +349,7 @@ def learn(agent, policy_nn, target_nn):
             for item in env.history:
                 state, action, reward, info = item
                 stacks.append(state['stacks'])
-            pays = np.array(env.state.payouts, dtype='int')
+            pays = np.array(env.state.rewards, dtype='int')
             player = np.argmax(pays)
             epoch_wrate += pays
             wins[player] += 1

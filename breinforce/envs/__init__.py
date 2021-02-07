@@ -1,4 +1,4 @@
-from .bropoker_env import BropokerEnv
+from .bropoker.env import BropokerEnv
 
 __all__ = [
     'BropokerEnv'

@@ -1,6 +1,9 @@
 import json
 import gym
 import os
+import uuid
+import random
+import string
 from breinforce.core.app import ENVS_DIR
 
 
@@ -33,6 +36,24 @@ def flatten(legal_actions):
                 out[f'raise_{ik}'] = iv
         else:
             out[k] = v
+    return out
+
+
+def guid(size, mode='int'):
+    """
+    Generates unique object identifier
+
+    Args:
+        mode (str): mode of generating identifier
+
+    Returns:
+        str: generated identifier
+    """
+    out = ''
+    if mode == 'int':
+        out = str(uuid.uuid4().int)[:size]
+    else:
+        out = ''.join(random.choice(string.ascii_lowercase) for _ in range(size))
     return out
 
 

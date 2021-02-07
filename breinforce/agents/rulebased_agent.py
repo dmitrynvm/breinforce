@@ -2,7 +2,7 @@ import random
 from . import SplitAgent
 from breinforce.core.types import Action
 from breinforce.core.utils import flatten
-from breinforce.games.bropoker import Card, Judge
+from breinforce.envs.bropoker.types import Card, Judge
 
 
 class RuleBasedAgent(SplitAgent):
