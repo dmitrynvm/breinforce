@@ -1,5 +1,5 @@
-from .dqnetwork import DQNetwork
+from .mlpnetwork import MLPNetwork
 
 __all__ = [
-    'DQNetwork'
+    'MLPNetwork'
 ]

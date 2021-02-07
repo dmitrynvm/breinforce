@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 
-class DQNetwork(nn.Module):
+class MLPNetwork(nn.Module):
     def __init__(self, n_features):
         super().__init__()
         self.fc1 = nn.Linear(in_features=n_features, out_features=24)

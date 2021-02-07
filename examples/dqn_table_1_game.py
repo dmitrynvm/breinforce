@@ -79,17 +79,7 @@ def get_next(target_nn, next_states):
     return values
 
 
-class GreedyStrategy():
-    def __init__(self, start, stop, decay):
-        self.start = start
-        self.stop = stop
-        self.decay = decay
-
-    def rate(self, step):
-        return self.stop + (self.start - self.stop) * math.exp(-1. * step * self.decay)
-
-
-class DQNetwork(nn.Module):
+class MLPNetwork(nn.Module):
     def __init__(self, n_features, n_output):
         super().__init__()
         self.fc1 = nn.Linear(in_features=n_features, out_features=24)
@@ -110,17 +100,28 @@ class DQNetwork(nn.Module):
         return x
 
 
+def greedy_rate(step, eps_start, eps_stop, eps_decay):
+    return eps_stop + (eps_start - eps_stop) * math.exp(-1. * step * eps_decay)
+
+
 class DQNAgent():
-    def __init__(self, strategy, num_actions, device):
+
+    def __init__(
+        self,
+        num_actions,
+        eps_start=1,
+        eps_stop=0.01,
+        eps_decay=0.001
+    ):
         self.current_step = 0
-        self.strategy = strategy
         self.num_actions = num_actions
-        self.device = device
+        self.eps_start = eps_start
+        self.eps_stop = eps_stop
+        self.eps_decay = eps_decay
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     def encode(self, obs):
-
         possible_moves = ['fold', 'call', 'allin', 'raise_1/3', 'raise_1/2', 'raise_3/4', 'raise_1', 'raise_3/2']
-
         legal_moves = []
         for move in possible_moves:
             if move in obs['legal_actions']:
@@ -198,9 +199,14 @@ class DQNAgent():
 
         return torch_tensor.float()
 
-    def predict(self, observation, policy_net):
-        observation = self.encode(observation)
-        rate = self.strategy.rate(self.current_step)
+    def predict(self, obs, policy):
+        obs = self.encode(obs)
+        rate = greedy_rate(
+            self.current_step,
+            self.eps_start,
+            self.eps_stop,
+            self.eps_decay
+        )
         self.current_step += 1
 
         if rate > random.random(): # explore
@@ -208,7 +214,7 @@ class DQNAgent():
             return torch.tensor([action]).to(self.device)
         else:
             with torch.no_grad():
-                return policy_net(observation).argmax(dim=1).to(self.device) # exploit
+                return policy(obs).argmax(dim=1).to(self.device) # exploit
 
 
 def legal_actions(obs, splits):
@@ -231,7 +237,7 @@ def legal_actions(obs, splits):
     return out
 
 
-def learn(agent, policy_nn, target_nn):
+def learn(agent, policy_net, target_net):
     batch_size = 256
     gamma = 0.999
     target_update = 10
@@ -243,7 +249,7 @@ def learn(agent, policy_nn, target_nn):
     core.utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     memory = SequentialMemory(memory_size)
-    optimizer = optim.Adam(params=policy_nn.parameters(), lr=lr_decay)
+    optimizer = optim.Adam(params=policy_net.parameters(), lr=lr_decay)
 
     hist = ''
     wrate = []
@@ -275,7 +281,7 @@ def learn(agent, policy_nn, target_nn):
                     l_actions = flatten(l_actions, parent_key='', sep='_')
                     obs['legal_actions'] = l_actions
 
-                    action = agent.predict(obs, policy_nn)
+                    action = agent.predict(obs, policy_net)
                     player_id = obs['player']
                     action_type = action.numpy()[0]
 
@@ -285,37 +291,36 @@ def learn(agent, policy_nn, target_nn):
                     if a_w_types[action.numpy()[0]] not in obs['legal_actions']:
                         if action_type == 1 or action_type == 2 or action_type == 3 or action_type == 4:
                             action = torch.tensor([0])
-                            action_sum = obs['legal_actions']['fold']
+                            action_value = obs['legal_actions']['fold']
                         else:
                             action = torch.tensor([7])
-                            action_sum = obs['legal_actions']['allin']
+                            action_value = obs['legal_actions']['allin']
                     else:
                         if action_type == 0:
-                            action_sum = obs['legal_actions']['fold']
+                            action_value = obs['legal_actions']['fold']
                         elif action_type == 7:
-                            action_sum = obs['legal_actions']['allin']
+                            action_value = obs['legal_actions']['allin']
                         elif action_type == 6:
-                            action_sum = obs['legal_actions']['call']
+                            action_value = obs['legal_actions']['call']
                         elif action_type == 1:
-                            action_sum = obs['legal_actions']['raise_1/3']
+                            action_value = obs['legal_actions']['raise_1/3']
                         elif action_type == 2:
-                            action_sum = obs['legal_actions']['raise_1/2']
+                            action_value = obs['legal_actions']['raise_1/2']
                         elif action_type == 3:
-                            action_sum = obs['legal_actions']['raise_3/4']
+                            action_value = obs['legal_actions']['raise_3/4']
                         elif action_type == 4:
-                            action_sum = obs['legal_actions']['raise_1']
+                            action_value = obs['legal_actions']['raise_1']
                         else:
-                            action_sum = obs['legal_actions']['raise_3/2']
+                            action_value = obs['legal_actions']['raise_3/2']
 
                     prev_obs = obs
 
-                    the_action = Action(a_w_types[action_type], action_sum)
+                    the_action = Action(a_w_types[action_type], action_value)
 
                     policy_out = str(obs) + '-> '
                     obs, rewards, done = env.step(the_action)
                     policy_out += str(the_action) + '\n'
                     agent_out += policy_out
-
 
                     l_actions = legal_actions(obs, splits)
                     l_actions = flatten(l_actions, parent_key='', sep='_')
@@ -328,8 +333,8 @@ def learn(agent, policy_nn, target_nn):
 
                     if memory.ready(batch_size):
                         states, actions, rewards, next_states = memory.sample(batch_size)
-                        current_q_values = get_current(policy_nn, states, actions)
-                        next_q_values = get_next(target_nn, next_states)
+                        current_q_values = get_current(policy_net, states, actions)
+                        next_q_values = get_next(target_net, next_states)
                         target_q_values = (next_q_values * gamma) + rewards
                         loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
                         optimizer.zero_grad()
@@ -341,7 +346,7 @@ def learn(agent, policy_nn, target_nn):
                     break
 
             if episode % target_update == 0:
-                target_nn.load_state_dict(policy_nn.state_dict())
+                target_net.load_state_dict(policy_net.state_dict())
 
             hist += env.render() + '\n\n'
             for item in env.history:
@@ -358,7 +363,7 @@ def learn(agent, policy_nn, target_nn):
             # saving checkpoint
             torch.save({
                 'epoch': epoch,
-                'model_state_dict': policy_nn.state_dict(),
+                'model_state_dict': policy_net.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': epoch_loss,
             }, 'checkpoints/latest_model.pt')
@@ -368,6 +373,7 @@ def learn(agent, policy_nn, target_nn):
         wrate.append(epoch_wrate.tolist())
     pbar.close()
 
+    os.makedirs('results', exist_ok=True)
     wrate = np.array(wrate).T
     df_wrate = pd.DataFrame(data=wrate, dtype='int')
     df_wrate['wins'] = pd.DataFrame(wins)
@@ -388,22 +394,14 @@ def learn(agent, policy_nn, target_nn):
     with open('results/history.txt', 'w') as f:
         f.write(hist)
 
-
     with open('results/agent_out.txt', 'w') as f:
         f.write(agent_out)
 
 
 if __name__ == '__main__':
-    eps_start = 1
-    eps_stop = 0.01
-    eps_decay = 0.001
+    agent = DQNAgent(8)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    strategy = GreedyStrategy(eps_start, eps_stop, eps_decay)
-    agent = DQNAgent(strategy, 8, device)
-    policy_nn = DQNetwork(395, 8).to(device)
-    target_nn = DQNetwork(395, 8).to(device)
-    target_nn.load_state_dict(policy_nn.state_dict())
-    os.makedirs('results', exist_ok=True)
-    torch.save(policy_nn.state_dict(), 'results/policy_nn.pt')
-    torch.save(target_nn.state_dict(), 'results/target_nn.pt')
-    learn(agent, policy_nn, target_nn)
+    policy_net = MLPNetwork(395, 8).to(device)
+    target_net = MLPNetwork(395, 8).to(device)
+    target_net.load_state_dict(policy_net.state_dict())
+    learn(agent, policy_net, target_net)
