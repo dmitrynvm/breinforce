@@ -10,7 +10,7 @@ class BropokerEnv(gym.Env):
     def __init__(self, config):
         self.store = create_store(
             engine.reducers.root,
-            engine.creators.init_state(config)
+            engine.creators.state(config)
         )
         self.config = config
         self.history = []

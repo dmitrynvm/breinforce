@@ -18,7 +18,7 @@ def step(action):
     }
 
 
-def init_state(config):
+def state(config):
     n_players = config['n_players']
     n_streets = config['n_streets']
     n_ranks = config['n_ranks']
