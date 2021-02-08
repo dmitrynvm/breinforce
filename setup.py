@@ -1,5 +1,5 @@
 import setuptools
-from breinforce.core.app import VERSION
+from version import VERSION
 
 
 setuptools.setup(
