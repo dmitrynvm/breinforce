@@ -1,10 +1,7 @@
 import os
+from pathlib import Path
 
-ROOT_DIR = os.getcwd()
-
-PKG_DIR = os.path.join(ROOT_DIR, 'breinforce')
-
-BASE_DIR = os.path.join(PKG_DIR, 'breinforce')
+BASE_DIR = Path(__file__).parent.parent
 
 ENVS_DIR = os.path.join(BASE_DIR, 'envs')
 
