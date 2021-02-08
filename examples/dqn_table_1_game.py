@@ -18,6 +18,7 @@ from time import sleep
 from fractions import Fraction
 import collections
 
+core.utils.configure('envs.json')
 
 np.random.seed(1)
 
@@ -246,7 +247,6 @@ def learn(agent, policy_net, target_net):
     n_epochs = 5
     n_episodes = 10
 
-    core.utils.configure()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     memory = SequentialMemory(memory_size)
     optimizer = optim.Adam(params=policy_net.parameters(), lr=lr_decay)

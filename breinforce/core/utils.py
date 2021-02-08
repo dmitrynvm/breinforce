@@ -4,13 +4,11 @@ import os
 import uuid
 import random
 import string
-from breinforce.core.app import ENVS_DIR
 
 
-def configure():
+def configure(config_path):
     ''' Merges the local initialization envs to the global OpenAI Gym list.
     '''
-    config_path = os.path.join(ENVS_DIR, 'config.json')
     with open(config_path, 'r') as f:
         game_configs = json.loads(f.read())
         for game in game_configs:
