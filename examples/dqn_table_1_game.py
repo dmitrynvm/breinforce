@@ -18,7 +18,7 @@ from time import sleep
 from fractions import Fraction
 import collections
 
-core.utils.configure('envs.json')
+core.utils.configure()
 
 np.random.seed(1)
 
