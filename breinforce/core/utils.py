@@ -17,7 +17,6 @@ def configure():
             env_names = [env.id for env in gym.envs.registry.all()]
             for env_name, env_config in env_configs.items():
                 if env_name not in env_names:
-                    print(env_name)
                     gym.envs.registration.register(
                         id=env_name,
                         entry_point=env_entry_point,
