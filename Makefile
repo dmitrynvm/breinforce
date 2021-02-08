@@ -1,5 +1,5 @@
 install:
-	@pip install -e .
+	@sh install.sh
 
 server:
 	@python3 breinforce/api/server.py
