@@ -26,7 +26,7 @@ def pretty(history):
             if has_betted:
                 out += f"raises ${action.value - state['valid_actions']['call']} to ${action.value}"
             else:
-                if street:
+                if not street:
                     out += f"raises ${action.value - state['valid_actions']['call']} to ${action.value}"
                 else:
                     out += f'bets ${action.value}'
@@ -39,7 +39,7 @@ def header(history):
     out = ''
     state = history[0].state
     game = state['game']
-    date = state['date']
+    date = state.date.strftime("%d %m %Y %H:%M:%S")
     small_blind = state['small_blind']
     big_blind = state['big_blind']
     straddle = state['straddle']

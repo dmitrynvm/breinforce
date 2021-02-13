@@ -205,13 +205,13 @@ def move_street(state):
 
 
 def move_step(state, action):
-    update_rewards(state)
     update_largest(state, action)
     update_folded(state, action)
     update_valid_actions(state)
     collect_action(state, action)
     move_player(state)
     move_street(state)
+    update_rewards(state)
 
 
 def reset(state):

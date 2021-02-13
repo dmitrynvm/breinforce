@@ -319,6 +319,7 @@ def learn(agent, policy_net, target_net):
 
                     policy_out = str(obs) + '-> '
                     obs, rewards, done = env.step(the_action)
+                    print(the_action, rewards)
                     policy_out += str(the_action) + '\n'
                     agent_out += policy_out
 
