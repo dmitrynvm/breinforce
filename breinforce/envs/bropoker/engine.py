@@ -1,5 +1,10 @@
+import random
 import numpy as np
+from datetime import datetime
 from breinforce.envs.bropoker.types import Judge
+from addict import Dict
+from breinforce import agents, core, views
+from breinforce.envs.bropoker.types import Deck
 
 
 def observe(state):
@@ -15,7 +20,7 @@ def observe(state):
         'alive': state.alive.tolist(),
         'stacks': state.stacks.tolist(),
         'commits': state.commits.tolist(),
-        'valid_actions': get_valid_actions(state)
+        'valid_actions': valid_actions(state)
     }
     return out
 
@@ -103,7 +108,7 @@ def results(state):
     return observe(state), reward(state), done(state)
 
 
-def get_valid_actions(state):
+def valid_actions(state):
     out = {}
     call = state.commits.max() - state.commits[state.player]
     call = min(call, state.stacks[state.player])
@@ -150,15 +155,15 @@ def collect_blinds(state):
 
 
 def update_largest(state, action):
-    valid_actions = get_valid_actions(state)
-    if action.value and (action.value - valid_actions['call']) >= state.largest:
-        state.largest = action.value - valid_actions['call']
+    va = valid_actions(state)
+    if action.value and (action.value - va['call']) >= state.largest:
+        state.largest = action.value - va['call']
 
 
 def update_folded(state, action):
-    valid_actions = get_valid_actions(state)
-    if 'call' in valid_actions:
-        if valid_actions['call'] and ((action.value < valid_actions['call']) or action.value < 0):
+    va = valid_actions(state)
+    if 'call' in va:
+        if va['call'] and ((action.value < va['call']) or action.value < 0):
             state.alive[state.player] = 0
             state.folded[state.player] = state.street
     else:
@@ -171,10 +176,10 @@ def update_rewards(state):
 
 
 def update_valid_actions(state):
-    state.valid_actions = get_valid_actions(state)
+    state.valid_actions = valid_actions(state)
 
 
-def move_player(state):
+def update_player(state):
     for idx in range(1, state.n_players + 1):
         player = (state.player + idx) % state.n_players
         if state.alive[player]:
@@ -209,17 +214,86 @@ def move_step(state, action):
     update_folded(state, action)
     update_valid_actions(state)
     collect_action(state, action)
-    move_player(state)
+    update_player(state)
     move_street(state)
     update_rewards(state)
 
 
-def reset(state):
+def make_reset(state):
     n_players = state['n_players']
     if n_players > 2:
-        actions.move_player(state)
+        update_player(state)
     #collect_antes(state)
     collect_blinds(state)
-    move_player(state)
-    move_player(state)
-    move_player(state)
+    update_player(state)
+    update_player(state)
+    update_player(state)
+
+
+def reset():
+    return {"type": "RESET"}
+
+
+def step(action):
+    return {
+        "type": "STEP",
+        'action': action
+    }
+
+
+def init_state(config):
+    n_players = config['n_players']
+    n_streets = config['n_streets']
+    n_ranks = config['n_ranks']
+    n_suits = config['n_suits']
+    n_hole_cards = config['n_hole_cards']
+    n_community_cards = config['ns_community_cards'][0]
+    deck = Deck(n_suits, n_ranks)
+    out = Dict({
+        'n_players': config["n_players"],
+        'n_streets': config["n_streets"],
+        'n_suits': config["n_suits"],
+        'n_ranks': config["n_ranks"],
+        'n_hole_cards': config["n_hole_cards"],
+        'n_cards_for_hand': config["n_cards_for_hand"],
+        'rake': config['rake'],
+        'raise_sizes': config['raise_sizes'],
+        'ns_community_cards': config["ns_community_cards"],
+        'blinds': np.array(config["blinds"], dtype=int),
+        'antes': np.array(config["antes"], dtype=int),
+        'splits': np.array(config["splits"], dtype=int),
+        'stacks': np.array(config["stacks"], dtype=int),
+        # meta
+        'game': core.utils.guid(9, 'int'),
+        'table': core.utils.guid(5, 'str'),
+        'date': datetime.now(),
+        'player_names': ["agent_" + str(i+1) for i in range(n_players)],
+        'small_blind': config['blinds'][0],
+        'big_blind': config['blinds'][1] if n_players > 1 else None,
+        'straddle': config['blinds'][2] if n_players > 3 else None,
+        # dealer
+        'street': 0,
+        'button': 0,
+        'player': 0,
+        'largest': 0,
+        'pot': 0,
+        'rewards': [0 for _ in range(n_players)],
+        'community_cards': deck.deal(n_community_cards),
+        'hole_cards': [deck.deal(n_hole_cards) for _ in range(n_players)],
+        'alive': np.ones(n_players, dtype=np.uint8),
+        'contribs': np.zeros(n_players, dtype=np.int32),
+        'acted': np.zeros(n_players, dtype=np.uint8),
+        'commits': np.zeros(n_players, dtype=np.int32),
+        'folded': np.array([n_streets for i in range(n_players)]),
+        'deck': deck,
+        'valid_actions': None
+    })
+    return out
+
+
+def update(state, msg):
+    if msg["type"] == "RESET":
+        make_reset(state)
+    elif msg["type"] == "STEP":
+        move_step(state, msg['action'])
+    return state

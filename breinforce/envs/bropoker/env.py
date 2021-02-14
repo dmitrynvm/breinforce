@@ -9,8 +9,8 @@ class BropokerEnv(gym.Env):
 
     def __init__(self, config):
         self.store = create_store(
-            engine.reducers.root,
-            engine.creators.state(config)
+            engine.update,
+            engine.init_state(config)
         )
         self.config = config
         self.history = []
@@ -21,9 +21,9 @@ class BropokerEnv(gym.Env):
 
     def step(self, action):
         player = self.state.player
-        self.store.dispatch(engine.creators.step(action))
+        self.store.dispatch(engine.step(action))
         self.history += [Episode(self.state.deepcopy(), player, action)]
-        return engine.actions.results(self.state)
+        return engine.results(self.state)
 
     def register(self, players):
         self.players = players
@@ -39,9 +39,9 @@ class BropokerEnv(gym.Env):
         return out
 
     def reset(self):
-        self.store.dispatch(engine.creators.reset())
+        self.store.dispatch(engine.reset())
         self.history = []
-        return engine.actions.observe(self.state)
+        return engine.observe(self.state)
 
     @property
     def state(self):
